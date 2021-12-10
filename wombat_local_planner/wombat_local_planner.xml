@@ -1,0 +1,7 @@
+<library path="wombat_local_planner">
+  <class type="wombat_local_planner::WombatLocalPlanner" base_class_type="nav2_core::Controller">
+    <description>
+      wombat_local_planner_plugin
+    </description>
+  </class>
+</library>
