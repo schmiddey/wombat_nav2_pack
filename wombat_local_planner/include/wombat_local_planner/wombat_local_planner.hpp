@@ -71,7 +71,8 @@ protected:
   //-- Params --
   // rclcpp::Duration _tf_tolerance;
   rclcpp::Duration _tf_tolerance{0, 0};
-
+  double           _prune_distance = 99999.99;
+  
 
 
 

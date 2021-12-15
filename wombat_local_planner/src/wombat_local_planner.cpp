@@ -121,12 +121,14 @@ nav_msgs::msg::Path WombatLocalPlanner::prepareGlobalPath(const geometry_msgs::m
   //trim global path by the points outside the local costmap
   auto* costmap = _costmap_ros->getCostmap();
   double dist_threshold = std::max(costmap->getSizeInCellsX(), costmap->getSizeInCellsY()) * costmap->getResolution() / 2.0;
-  double sq_dist_threshold = dist_threshold * dist_threshold;
-
+  
+  double sq_dist_threshold = std::min(dist_threshold, _prune_distance);
+  sq_dist_threshold = sq_dist_threshold * sq_dist_threshold;
   
 
-  nav_msgs::msg::Path ret;
 
+  nav_msgs::msg::Path ret;
+ 
   return ret;
 }
 
