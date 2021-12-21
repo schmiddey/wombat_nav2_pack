@@ -17,6 +17,7 @@
 #include "lifecycle_publisher.hpp"
 
 #include "wombat_utility/tf_utility.hpp"
+#include "wombat_utility/utility.hpp"
 
 namespace wombat_local_planner{
 
@@ -38,7 +39,7 @@ public:
   
   // geometry_msgs::msg::TwistStamped computeVelocityCommands(const geometry_msgs::msg::PoseStamped & pose,
   //                                                          const geometry_msgs::msg::Twist & velocity) override;
-
+  
   geometry_msgs::msg::TwistStamped computeVelocityCommands(const geometry_msgs::msg::PoseStamped& pose,
                                                            const geometry_msgs::msg::Twist& velocity, 
                                                            nav2_core::GoalChecker* goal_checker) override;
@@ -56,7 +57,7 @@ protected:
    * @param robot_pose 
    * @return nav_msgs::msg::Path 
    */
-  nav_msgs::msg::Path prepareGlobalPath(const geometry_msgs::msg::PoseStamped& robot_pose) const;
+  nav_msgs::msg::Path prepareGlobalPath(const geometry_msgs::msg::PoseStamped& robot_pose, const nav_msgs::msg::Path& global_path) const;
 
 protected: 
   rclcpp_lifecycle::LifecycleNode::WeakPtr       _node;
@@ -71,15 +72,17 @@ protected:
   //-- Params --
   // rclcpp::Duration _tf_tolerance;
   rclcpp::Duration _tf_tolerance{0, 0};
-  double           _prune_distance = 99999.99;
+  double           _local_target_dist = 0.2;
+  double           _local_path_max_dist = 99999.99;
   
 
 
 
 
-
-  nav_msgs::msg::Path _global_plan;
-  nav_msgs::msg::Path _transformed_global_plan;
+  
+  nav_msgs::msg::Path _global_path;
+  nav_msgs::msg::Path _local_path_unmodified;
+  // nav_msgs::msg::Path _transformed_global_plan;
   // -- -- 
   std::unique_ptr<wombat::LifecylePubHandler> _pub;
 };

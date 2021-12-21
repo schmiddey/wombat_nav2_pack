@@ -74,8 +74,9 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
   geometry_msgs::msg::TwistStamped msg;
   msg.twist = velocity;
 
+  auto goal_is_reached = goal_checker->isGoalReached(pose.pose, pose.pose, velocity);
 
-  goal_checker->isGoalReached(pose.pose, pose.pose, velocity);
+  _local_path_unmodified = this->prepareGlobalPath(pose, _global_path);
   
   return msg;
 }
@@ -83,9 +84,7 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
 void WombatLocalPlanner::setPlan(const nav_msgs::msg::Path& path) 
 {
   _pub->publish_global_plan(path);
-  // Transform global path into the robot's frame
-
-  // _global_plan = transformGlobalPlan(path);
+  _global_path = path;
 }
 
 
@@ -99,12 +98,24 @@ void WombatLocalPlanner::setSpeedLimit(const double & speed_limit, const bool & 
   RCLCPP_ERROR(_logger, "speedlimit: %f , use percent %s", sl, (per ? "true" : "false"));
 }
 
-
-nav_msgs::msg::Path WombatLocalPlanner::prepareGlobalPath(const geometry_msgs::msg::PoseStamped& robot_pose) const
+/**
+ * @brief 
+ * 
+ * @todo check and ensure that first pose of ret_path is roughly(maybe configurable) at local_target_dist, if not interpolate
+ * 
+ * @param robot_pose 
+ * @param global_path 
+ * @return nav_msgs::msg::Path 
+ */
+nav_msgs::msg::Path WombatLocalPlanner::prepareGlobalPath(const geometry_msgs::msg::PoseStamped& robot_pose, const nav_msgs::msg::Path& global_path) const
 {
   //Do it as in dwb controller
+  std::cout << "--" << std::endl;
+  std::cout << " enter prepareGlobalPath" << std::endl;
+  std::cout << "cost_map_global_frame: " << _costmap_ros->getGlobalFrameID() << std::endl;
+  std::cout << "robot_pose_frame:      " << robot_pose.header.frame_id << std::endl;
 
-  if(_global_plan.poses.empty())
+  if(global_path.poses.empty())
   {
     throw nav2_core::PlannerException("Received empty global path");
   }
@@ -112,24 +123,58 @@ nav_msgs::msg::Path WombatLocalPlanner::prepareGlobalPath(const geometry_msgs::m
   //first transform the robot pose in global path frame , trim global path, then transform global path into robot_pose 
   //frame to prevent transforming unnecessary poses from global path
   
-  auto t_robot_pose = wombat::TfUtility::transform(_tf, robot_pose, _global_plan.header.frame_id, _tf_tolerance);
+  auto t_robot_pose = wombat::TfUtility::transform(_tf, robot_pose, global_path.header.frame_id, _tf_tolerance);
   if(!t_robot_pose)
   {
     throw nav2_core::PlannerException("Unable to transform robot pose into global plan's frame");
   }
-  
   //trim global path by the points outside the local costmap
   auto* costmap = _costmap_ros->getCostmap();
   double dist_threshold = std::max(costmap->getSizeInCellsX(), costmap->getSizeInCellsY()) * costmap->getResolution() / 2.0;
   
-  double sq_dist_threshold = std::min(dist_threshold, _prune_distance);
-  sq_dist_threshold = sq_dist_threshold * sq_dist_threshold;
+  //min dist for first path element
+  double sq_path_min_dist = std::min(dist_threshold, _local_target_dist);
+  std::cout << "dist_threshold: " << dist_threshold << std::endl;
+  std::cout << "_local_target_dist: " << _local_target_dist << std::endl;
+  std::cout << "min ->  sq_path_min_dist: " << sq_path_min_dist << std::endl;
+  sq_path_min_dist = sq_path_min_dist * sq_path_min_dist;
+
+
+  //max dist for last path element
+  double sq_path_max_dist = std::min(dist_threshold, _local_path_max_dist);
+  sq_path_max_dist = sq_path_max_dist * sq_path_max_dist;
+
+  //find first pose thats less than sq_path_min_dist from the robot_pose
+  auto transformation_begin = std::find_if(begin(global_path.poses), end(global_path.poses),
+                                           [&](const auto & global_plan_pose) {
+                                             return wombat::Utility::computeSquareDistance2D(t_robot_pose.value(), global_plan_pose) < sq_path_min_dist;
+                                           }
+                                           );
+
+  //find fist pose thats further than sq_path_max_dist from robot_pose
+  auto transformation_end = std::find_if(transformation_begin, end(global_path.poses),
+                                         [&](const auto & global_plan_pose) {
+                                           return wombat::Utility::computeSquareDistance2D(t_robot_pose.value(), global_plan_pose) > sq_path_max_dist;
+                                         }
+                                         );
   
+  nav_msgs::msg::Path transformed_global_path;
+  transformed_global_path.header = global_path.header;
+  //create container with poses within the local range
+  transformed_global_path.poses = decltype(transformed_global_path.poses)(transformation_begin, transformation_end);
 
+  transformed_global_path = wombat::TfUtility::transform(_tf, transformed_global_path, _costmap_ros->getGlobalFrameID(), _tf_tolerance).value_or(nav_msgs::msg::Path());
 
-  nav_msgs::msg::Path ret;
- 
-  return ret;
+  if (transformed_global_path.poses.empty()) {
+    throw nav2_core::PlannerException("Resulting plan has 0 poses in it.");
+  }
+
+  transformed_global_path.header.stamp = robot_pose.header.stamp;
+
+  std::cout << "  leaf prepareGlobalPath" << std::endl;
+  std::cout << "--" << std::endl;
+
+  return transformed_global_path;
 }
 
 

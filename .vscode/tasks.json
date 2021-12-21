@@ -2,16 +2,17 @@
 	"version": "2.0.0",
 	"tasks": [
     {
+      "label": "colcon_build",
       "type": "shell",
       "command": "colcon build --packages-up-to ${input:pkgs} --symlink-install",
       "options": {
         "cwd": "${workspaceFolder}/../../"
       },
-      "problemMatcher": [
-        "$catkin-gcc",
-      ],
-      "group": "build",
-      "label": "colcon_build"
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": "$gcc"
     },
   ],
   "inputs": [
@@ -25,4 +26,4 @@
       ]
     }
   ]
-}
+}y
