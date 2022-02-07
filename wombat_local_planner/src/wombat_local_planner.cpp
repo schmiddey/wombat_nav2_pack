@@ -43,6 +43,8 @@ void WombatLocalPlanner::configure(const rclcpp_lifecycle::LifecycleNode::WeakPt
   node->get_parameter(_plugin_name + ".transform_tolerance", transform_tolerance);
   _tf_tolerance = rclcpp::Duration::from_seconds(transform_tolerance);
 
+  //todo other controller via plugin!!
+  _controller = std::make_unique<wombat::MecanumController>();
 
   _pub->on_configure();
 }
@@ -69,15 +71,29 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
                                                                              const geometry_msgs::msg::Twist& velocity, 
                                                                              nav2_core::GoalChecker* goal_checker) 
 {
-  RCLCPP_INFO(_logger, "pose_in frame: %s", pose.header.frame_id.c_str());
-
+  //only for compile stuff
   geometry_msgs::msg::TwistStamped msg;
   msg.twist = velocity;
 
-  auto goal_is_reached = goal_checker->isGoalReached(pose.pose, pose.pose, velocity);
 
+  RCLCPP_INFO(_logger, "pose_in frame: %s", pose.header.frame_id.c_str());
+
+  auto goal_is_reached = goal_checker->isGoalReached(pose.pose, pose.pose, velocity);
+  if(goal_is_reached)
+  {
+    RCLCPP_INFO(_logger, "Goal is Reached");
+  }
+
+
+
+  //todo if last path element is shorter than 
   _local_path_unmodified = this->prepareGlobalPath(pose, _global_path);
-  
+
+  auto path_length = wombat::Utility::computePathLength(_local_path_unmodified);
+
+  msg = _controller->control(pose, _local_path_unmodified, (path_length < 1.0 ? path_length : 1.0));
+  msg.header.stamp = pose.header.stamp;
+  msg.header.frame_id = "todo";
   return msg;
 }
 
@@ -102,6 +118,8 @@ void WombatLocalPlanner::setSpeedLimit(const double & speed_limit, const bool & 
  * @brief 
  * 
  * @todo check and ensure that first pose of ret_path is roughly(maybe configurable) at local_target_dist, if not interpolate
+ * 
+ * @todo REDO!!!! like in python script
  * 
  * @param robot_pose 
  * @param global_path 

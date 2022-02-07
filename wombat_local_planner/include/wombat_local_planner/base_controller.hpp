@@ -21,15 +21,21 @@ public:
   virtual void initialize() = 0;
   
   /**
-   * @brief first pose of the local path must have at least the defined distance
+   * @brief 
    * 
-   * @param robot_pose 
-   * @return geometry_msgs::msg::TwistStamped 
+   * @param robot_pose         -> current robot pose
+   * @param local_path         -> current local path, first pose of the local path must have at least the defined distance, unless its the final target pose (todo)
+   * @param end_approach_scale -> scale between 1..0 how far the robot is from the final goal
+   * 
+   * @return geometry_msgs::msg::TwistStamped  scales -1 .. 1
    */
-  virtual geometry_msgs::msg::TwistStamped control(const geometry_msgs::msg::PoseStamped& robot_pose, const nav_msgs::msg::Path& local_path) = 0;
+  virtual geometry_msgs::msg::TwistStamped control(const geometry_msgs::msg::PoseStamped& robot_pose,
+                                                   const nav_msgs::msg::Path& local_path,
+                                                   const double end_approach_scale) = 0;
 
 protected:
   BaseController() = default;
+  rclcpp::Logger _logger {rclcpp::get_logger("WombatLocalPlanner_Controller")};
 };
 
 
