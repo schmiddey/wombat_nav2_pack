@@ -19,7 +19,7 @@ void WombatLocalPlanner::configure(const rclcpp_lifecycle::LifecycleNode::WeakPt
   _costmap_ros = costmap_ros;
   _tf          = tf;
   _plugin_name = name;
-  _logger      = node->get_logger();
+  _logger      = rclcpp::get_logger("wombat_local_planner");//node->get_logger();
   _clock       = node->get_clock();
 
 
@@ -45,6 +45,7 @@ void WombatLocalPlanner::configure(const rclcpp_lifecycle::LifecycleNode::WeakPt
 
   //todo other controller via plugin!!
   _controller = std::make_unique<wombat::MecanumController>();
+  _controller->initialize();
 
   _pub->on_configure();
 }
@@ -78,16 +79,17 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
 
   RCLCPP_INFO(_logger, "pose_in frame: %s", pose.header.frame_id.c_str());
 
-  auto goal_is_reached = goal_checker->isGoalReached(pose.pose, pose.pose, velocity);
+  auto goal_is_reached = goal_checker->isGoalReached(pose.pose, _global_path.poses.back().pose, velocity);
   if(goal_is_reached)
   {
     RCLCPP_INFO(_logger, "Goal is Reached");
-  }
 
+  }
 
 
   //todo if last path element is shorter than 
   _local_path_unmodified = this->prepareGlobalPath(pose, _global_path);
+  _pub->publish_local_plan(_local_path_unmodified);
 
   auto path_length = wombat::Utility::computePathLength(_local_path_unmodified);
 
@@ -165,7 +167,7 @@ nav_msgs::msg::Path WombatLocalPlanner::prepareGlobalPath(const geometry_msgs::m
   //find first pose thats less than sq_path_min_dist from the robot_pose
   auto transformation_begin = std::find_if(begin(global_path.poses), end(global_path.poses),
                                            [&](const auto & global_plan_pose) {
-                                             return wombat::Utility::computeSquareDistance2D(t_robot_pose.value(), global_plan_pose) < sq_path_min_dist;
+                                             return wombat::Utility::computeSquareDistance2D(t_robot_pose.value(), global_plan_pose) > sq_path_min_dist;
                                            }
                                            );
 
@@ -180,6 +182,16 @@ nav_msgs::msg::Path WombatLocalPlanner::prepareGlobalPath(const geometry_msgs::m
   transformed_global_path.header = global_path.header;
   //create container with poses within the local range
   transformed_global_path.poses = decltype(transformed_global_path.poses)(transformation_begin, transformation_end);
+
+  RCLCPP_INFO(_logger, "size of tranformed_path: %d", (int)transformed_global_path.poses.size());
+  RCLCPP_INFO_STREAM(_logger, "frame_path: " << transformed_global_path.header.frame_id);
+  RCLCPP_INFO_STREAM(_logger, "frame_first_pose: " << transformed_global_path.poses.front().header.frame_id);
+  RCLCPP_INFO_STREAM(_logger, "--- GLOBAL -- frame_first_pose: " << global_path.poses.front().header.frame_id);
+
+  for(auto& e : transformed_global_path.poses)
+  {
+    e.header = transformed_global_path.header;
+  }
 
   transformed_global_path = wombat::TfUtility::transform(_tf, transformed_global_path, _costmap_ros->getGlobalFrameID(), _tf_tolerance).value_or(nav_msgs::msg::Path());
 

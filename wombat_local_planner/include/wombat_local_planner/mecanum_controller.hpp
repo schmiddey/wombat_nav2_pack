@@ -48,9 +48,9 @@ public:
 
     Pose2 t_pose(local_path.poses.front().pose);
 
-    auto t_vec = t_pose.position - r_pose.position;
+    Eigen::Vector2d t_vec = t_pose.position - r_pose.position;
     
-    auto vel_lin = t_vec.normalized(); //todo set max vel to 1.0
+    auto vel_lin = t_vec;//.normalized(); //todo set max vel to 1.0
     vel_lin *= end_approach_scale; //todo may use an scale fcn
 
     //roate vel_lin by robot orientaion
