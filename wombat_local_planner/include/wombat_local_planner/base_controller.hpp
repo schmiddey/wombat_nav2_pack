@@ -18,7 +18,8 @@ class BaseController{
 public:
   virtual ~BaseController() = default;
 
-  virtual void initialize() = 0;
+  virtual void initialize(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent,
+                          const std::string& name) = 0;
   
   /**
    * @brief 
@@ -35,7 +36,7 @@ public:
 
 protected:
   BaseController() = default;
-  rclcpp::Logger _logger {rclcpp::get_logger("WombatLocalPlanner_Controller")};
+  rclcpp::Logger _logger {rclcpp::get_logger("wombatLocalPlanner->Controller")};
 };
 
 

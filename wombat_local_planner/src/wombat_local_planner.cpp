@@ -19,7 +19,7 @@ void WombatLocalPlanner::configure(const rclcpp_lifecycle::LifecycleNode::WeakPt
   _costmap_ros = costmap_ros;
   _tf          = tf;
   _plugin_name = name;
-  _logger      = rclcpp::get_logger("wombat_local_planner");//node->get_logger();
+  _logger      = rclcpp::get_logger("wombatLocalPlanner");//node->get_logger();
   _clock       = node->get_clock();
 
 
@@ -28,26 +28,40 @@ void WombatLocalPlanner::configure(const rclcpp_lifecycle::LifecycleNode::WeakPt
     _pub = std::make_unique<wombat::LifecylePubHandler>(parent, name);
   }
 
-  // nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".desired_linear_vel", rclcpp::ParameterValue(0.2));
-  // nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".lookahead_dist", rclcpp::ParameterValue(0.4));
-  // nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".max_angular_vel", rclcpp::ParameterValue(1.0));
-  // nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".end_approach_dist", rclcpp::ParameterValue(1.0));
+  RCLCPP_INFO(_logger, "--------------------------------------------------");
+  RCLCPP_INFO(_logger, "-- Wombat Local Planner -> Configure... Params: --");
+  RCLCPP_INFO(_logger, "--------------------------------------------------");
+
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".transform_tolerance", rclcpp::ParameterValue(2.0));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".local_target_dist",   rclcpp::ParameterValue(0.2));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".local_path_max_dist", rclcpp::ParameterValue(50.0));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".end_approach_dist",   rclcpp::ParameterValue(1.0));
   // nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".transform_tolerance", rclcpp::ParameterValue(0.1));
 
-  // node->get_parameter(_plugin_name + ".desired_linear_vel", _desired_linear_vel);
-  // node->get_parameter(_plugin_name + ".lookahead_dist",     _lookahead_dist);
-  // node->get_parameter(_plugin_name + ".max_angular_vel",    _max_angular_vel);
+  node->get_parameter(_plugin_name + ".local_target_dist",    _local_target_dist);
+  node->get_parameter(_plugin_name + ".local_path_max_dist",  _local_path_max_dist);
+  node->get_parameter(_plugin_name + ".end_approach_dist",    _end_approach_dist);
+
   // node->get_parameter(_plugin_name + ".end_approach_dist",    _end_approach_dist);
   
   double transform_tolerance;
   node->get_parameter(_plugin_name + ".transform_tolerance", transform_tolerance);
   _tf_tolerance = rclcpp::Duration::from_seconds(transform_tolerance);
 
-  //todo other controller via plugin!!
+
+  RCLCPP_INFO(_logger, "transform_tolerance: %f s", transform_tolerance);
+  RCLCPP_INFO(_logger, "local_target_dist: %f m", _local_target_dist);
+  RCLCPP_INFO(_logger, "local_path_max_dist: %f m", _local_path_max_dist);
+  RCLCPP_INFO(_logger, "end_approach_dist: %f m", _end_approach_dist);
+
+  //todo other controller via plugin!!  
   _controller = std::make_unique<wombat::MecanumController>();
-  _controller->initialize();
+  _controller->initialize(parent, name);
 
   _pub->on_configure();
+
+  RCLCPP_INFO(_logger, "--------------------------------------------------");
+  RCLCPP_INFO(_logger, "--------------------------------------------------");
 }
 
 void WombatLocalPlanner::cleanup() 
@@ -77,7 +91,7 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
   msg.twist = velocity;
 
 
-  RCLCPP_INFO(_logger, "pose_in frame: %s", pose.header.frame_id.c_str());
+  // RCLCPP_INFO(_logger, "pose_in frame: %s", pose.header.frame_id.c_str());
 
   auto goal_is_reached = goal_checker->isGoalReached(pose.pose, _global_path.poses.back().pose, velocity);
   if(goal_is_reached)
@@ -91,11 +105,24 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
   _local_path_unmodified = this->prepareGlobalPath(pose, _global_path);
   _pub->publish_local_plan(_local_path_unmodified);
 
+  //tmp fix for cropped path
   auto path_length = wombat::Utility::computePathLength(_local_path_unmodified);
+  auto dist_to_goal = wombat::Utility::computeSquareDistance2D(pose.pose, _local_path_unmodified.poses.back().pose );
 
-  msg = _controller->control(pose, _local_path_unmodified, (path_length < 1.0 ? path_length : 1.0));
+  auto final_length = std::max(path_length, dist_to_goal);
+  double end_approach_scale = 1.0;
+  if(final_length < _end_approach_dist)
+  {
+    end_approach_scale = wombat::Utility::rescale(final_length, 0.0, _end_approach_dist, 0.0, 1.0);
+  }
+
+  // RCLCPP_INFO(_logger, "end_approach_scale(0.0..1.0): %f", end_approach_scale);
+
+  msg = _controller->control(pose, _local_path_unmodified, end_approach_scale);
   msg.header.stamp = pose.header.stamp;
   msg.header.frame_id = "todo";
+
+
   return msg;
 }
 
@@ -103,6 +130,7 @@ void WombatLocalPlanner::setPlan(const nav_msgs::msg::Path& path)
 {
   _pub->publish_global_plan(path);
   _global_path = path;
+  RCLCPP_INFO(_logger, "Got new Path... size: %d, length: %f m:", static_cast<int>(path.poses.size()), wombat::Utility::computePathLength(path));
 }
 
 
@@ -130,10 +158,10 @@ void WombatLocalPlanner::setSpeedLimit(const double & speed_limit, const bool & 
 nav_msgs::msg::Path WombatLocalPlanner::prepareGlobalPath(const geometry_msgs::msg::PoseStamped& robot_pose, const nav_msgs::msg::Path& global_path) const
 {
   //Do it as in dwb controller
-  std::cout << "--" << std::endl;
-  std::cout << " enter prepareGlobalPath" << std::endl;
-  std::cout << "cost_map_global_frame: " << _costmap_ros->getGlobalFrameID() << std::endl;
-  std::cout << "robot_pose_frame:      " << robot_pose.header.frame_id << std::endl;
+  // std::cout << "--" << std::endl;
+  // std::cout << " enter prepareGlobalPath" << std::endl;
+  // std::cout << "cost_map_global_frame: " << _costmap_ros->getGlobalFrameID() << std::endl;
+  // std::cout << "robot_pose_frame:      " << robot_pose.header.frame_id << std::endl;
 
   if(global_path.poses.empty())
   {
@@ -154,9 +182,9 @@ nav_msgs::msg::Path WombatLocalPlanner::prepareGlobalPath(const geometry_msgs::m
   
   //min dist for first path element
   double sq_path_min_dist = std::min(dist_threshold, _local_target_dist);
-  std::cout << "dist_threshold: " << dist_threshold << std::endl;
-  std::cout << "_local_target_dist: " << _local_target_dist << std::endl;
-  std::cout << "min ->  sq_path_min_dist: " << sq_path_min_dist << std::endl;
+  // std::cout << "dist_threshold: " << dist_threshold << std::endl;
+  // std::cout << "_local_target_dist: " << _local_target_dist << std::endl;
+  // std::cout << "min ->  sq_path_min_dist: " << sq_path_min_dist << std::endl;
   sq_path_min_dist = sq_path_min_dist * sq_path_min_dist;
 
 
@@ -164,17 +192,24 @@ nav_msgs::msg::Path WombatLocalPlanner::prepareGlobalPath(const geometry_msgs::m
   double sq_path_max_dist = std::min(dist_threshold, _local_path_max_dist);
   sq_path_max_dist = sq_path_max_dist * sq_path_max_dist;
 
+  
   //find first pose thats less than sq_path_min_dist from the robot_pose
-  auto transformation_begin = std::find_if(begin(global_path.poses), end(global_path.poses),
+  auto transformation_rbegin = std::find_if(global_path.poses.rbegin(), global_path.poses.rend(),
                                            [&](const auto & global_plan_pose) {
-                                             return wombat::Utility::computeSquareDistance2D(t_robot_pose.value(), global_plan_pose) > sq_path_min_dist;
+                                             return wombat::Utility::computeSquareDistance2D(t_robot_pose.value().pose, global_plan_pose.pose) < sq_path_min_dist;
                                            }
                                            );
 
+  //create iterator from reverse iterator:
+  auto transformation_begin = transformation_rbegin.base() -1;
+  if(transformation_rbegin == global_path.poses.rend()) //todo check if correct
+  {
+    transformation_begin = global_path.poses.begin();
+  }
   //find fist pose thats further than sq_path_max_dist from robot_pose
-  auto transformation_end = std::find_if(transformation_begin, end(global_path.poses),
+  auto transformation_end = std::find_if(transformation_begin, global_path.poses.end(),
                                          [&](const auto & global_plan_pose) {
-                                           return wombat::Utility::computeSquareDistance2D(t_robot_pose.value(), global_plan_pose) > sq_path_max_dist;
+                                           return wombat::Utility::computeSquareDistance2D(t_robot_pose.value().pose, global_plan_pose.pose) > sq_path_max_dist;
                                          }
                                          );
   
@@ -183,10 +218,12 @@ nav_msgs::msg::Path WombatLocalPlanner::prepareGlobalPath(const geometry_msgs::m
   //create container with poses within the local range
   transformed_global_path.poses = decltype(transformed_global_path.poses)(transformation_begin, transformation_end);
 
-  RCLCPP_INFO(_logger, "size of tranformed_path: %d", (int)transformed_global_path.poses.size());
-  RCLCPP_INFO_STREAM(_logger, "frame_path: " << transformed_global_path.header.frame_id);
-  RCLCPP_INFO_STREAM(_logger, "frame_first_pose: " << transformed_global_path.poses.front().header.frame_id);
-  RCLCPP_INFO_STREAM(_logger, "--- GLOBAL -- frame_first_pose: " << global_path.poses.front().header.frame_id);
+  // RCLCPP_INFO(_logger, "size global path: %d", (int)global_path.poses.size());
+  // RCLCPP_INFO(_logger, "idx begin: %d", (int)std::distance(global_path.poses.begin(), transformation_begin));
+  // RCLCPP_INFO(_logger, "idx end  : %d", (int)std::distance(global_path.poses.begin(), transformation_end));
+
+
+  // RCLCPP_INFO(_logger, "size of tranformed_path: %d", (int)transformed_global_path.poses.size());
 
   for(auto& e : transformed_global_path.poses)
   {
@@ -201,8 +238,8 @@ nav_msgs::msg::Path WombatLocalPlanner::prepareGlobalPath(const geometry_msgs::m
 
   transformed_global_path.header.stamp = robot_pose.header.stamp;
 
-  std::cout << "  leaf prepareGlobalPath" << std::endl;
-  std::cout << "--" << std::endl;
+  // std::cout << "  leave prepareGlobalPath" << std::endl;
+  // std::cout << "--" << std::endl;
 
   return transformed_global_path;
 }

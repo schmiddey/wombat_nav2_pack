@@ -88,10 +88,11 @@ protected:
   //-- Params --
   // rclcpp::Duration _tf_tolerance;
   rclcpp::Duration _tf_tolerance{0, 0};
-  double           _local_target_dist = 0.2;  //dist a path element is defined as reached
-  double           _final_target_dist = 0.05; //todo check if needed
-  double           _local_path_max_dist = 99999.99;
-  double           _end_approach_dist = 1.0;
+  double           _local_target_dist   = 0.2;  //dist a path element is defined as reached
+  double           _local_path_max_dist = 50.0;
+  double           _end_approach_dist   = 1.0;
+
+  // double           _final_target_dist = 0.05; //todo check if needed
   
 
 

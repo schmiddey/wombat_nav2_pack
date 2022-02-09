@@ -17,23 +17,40 @@ namespace wombat{
 class Utility{
 public:
 
-// static void constrain(/*todo*/)
-// {
-//   //todo
-// }
-
-// static double rescale(double val_in, double in_min, double in_max, double out_min, double out_max)
-// {
-//   //todo
-//   return 0.0;
-// }
-
-
-static double computeSquareDistance2D(const geometry_msgs::msg::PoseStamped& pose_a,
-                                      const geometry_msgs::msg::PoseStamped& pose_b)
+/**
+ * @brief ala arduino
+ * 
+ * @param val 
+ * @param min_val 
+ * @param max_val 
+ * @return double 
+ */
+static inline double constrain(const double val, const double min_val, const double max_val)
 {
-  double x_diff = pose_a.pose.position.x - pose_b.pose.position.x;
-  double y_diff = pose_a.pose.position.y - pose_b.pose.position.y;
+  return std::min(max_val, std::max(min_val, val));
+}
+
+/**
+ * @brief ala arduino map
+ * 
+ * @param val_in 
+ * @param in_min 
+ * @param in_max 
+ * @param out_min 
+ * @param out_max 
+ * @return double 
+ */
+static inline double rescale(double val_in, double in_min, double in_max, double out_min, double out_max)
+{
+  return (val_in - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+
+static inline double computeSquareDistance2D(const geometry_msgs::msg::Pose& pose_a,
+                                             const geometry_msgs::msg::Pose& pose_b)
+{
+  double x_diff = pose_a.position.x - pose_b.position.x;
+  double y_diff = pose_a.position.y - pose_b.position.y;
 
   return x_diff * x_diff + y_diff * y_diff;
 }
@@ -45,7 +62,7 @@ static double computeSquareDistance2D(const geometry_msgs::msg::PoseStamped& pos
 
 //conversions
 //Eigen
-static Eigen::Vector2d toVector2d(const geometry_msgs::msg::Point& point)
+static inline Eigen::Vector2d toVector2d(const geometry_msgs::msg::Point& point)
 {
   return Eigen::Vector2d(point.x, point.y);
 }
@@ -68,7 +85,7 @@ static Eigen::Vector2d toVector2d(const geometry_msgs::msg::Point& point)
 //   return ang;
 // }
 
-static Eigen::Rotation2Dd angleBetween(const Eigen::Vector2d vec_a, const Eigen::Vector2d vec_b)
+static inline Eigen::Rotation2Dd angleBetween(const Eigen::Vector2d vec_a, const Eigen::Vector2d vec_b)
 {
   double dot = vec_a.dot(vec_b);
   double det = vec_a.x() * vec_b.y() - vec_a.y() * vec_b.x();
@@ -77,7 +94,7 @@ static Eigen::Rotation2Dd angleBetween(const Eigen::Vector2d vec_a, const Eigen:
   return Eigen::Rotation2Dd(angle);
 }
 
-static Eigen::Rotation2Dd toRotation2d(const geometry_msgs::msg::Quaternion& quat)
+static inline Eigen::Rotation2Dd toRotation2d(const geometry_msgs::msg::Quaternion& quat)
 {
   tf2::Quaternion tf_quat;
   tf2::fromMsg(quat, tf_quat);
@@ -90,7 +107,7 @@ static Eigen::Rotation2Dd toRotation2d(const geometry_msgs::msg::Quaternion& qua
   return Eigen::Rotation2Dd(yaw);
 }
 
-static double computePathLength(const nav_msgs::msg::Path& path)
+static inline double computePathLength(const nav_msgs::msg::Path& path)
 {
   double dist = 0.0;
   for(unsigned int i = 1; i < path.poses.size(); i++)
