@@ -2,5 +2,7 @@
   "files.associations": {
     "string": "cpp",
     "dense": "cpp"
-  }
+  },
+  "C_Cpp.intelliSenseCachePath": "${workspaceFolder}/.vscode"
+
 }
