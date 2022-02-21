@@ -183,7 +183,13 @@ public:
   {
     nav_msgs::msg::Path ros_path;
     ros_path.header = _header;
-    
+    std::transform(_poses.begin(), _poses.end(), ros_path.poses.begin(),
+                   [&](const auto& pose) -> geometry_msgs::msg::PoseStamped {
+                        geometry_msgs::msg::PoseStamped ret;
+                        ret.header = _header;
+                        ret.pose = pose.toRosPose();
+                        return ret; 
+                      });   
 
     return ros_path;
   }
@@ -203,9 +209,32 @@ public:
 
   }
 
+  /**
+   * @brief computes path length beween fiven iterators
+   * 
+   * @return double 
+   */
+  double computePathLength() const
+  {
+    return 0.0;
+  }
+
+  /**
+   * @brief returns a path defined by given iterators
+   * 
+   */
+  void subset()
+  {
+
+  }
+
 private:
   std_msgs::msg::Header _header;
   std::vector<Pose2> _poses;
+
+  int _it_near_pose;
+  int _it_far_pose;
+
 };
 
 

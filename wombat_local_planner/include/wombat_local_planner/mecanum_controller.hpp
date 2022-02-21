@@ -39,6 +39,7 @@ public:
     nav2_util::declare_parameter_if_not_declared(node, plugin_name + ".wait_for_rotation",  rclcpp::ParameterValue(1.0));
     nav2_util::declare_parameter_if_not_declared(node, plugin_name + ".max_vel_lin",        rclcpp::ParameterValue(1.0));
     nav2_util::declare_parameter_if_not_declared(node, plugin_name + ".max_vel_ang",        rclcpp::ParameterValue(1.0));
+    nav2_util::declare_parameter_if_not_declared(node, plugin_name + ".orientation_offset", rclcpp::ParameterValue(15));
     nav2_util::declare_parameter_if_not_declared(node, plugin_name + ".orientation_target", rclcpp::ParameterValue(std::string("by_next")));
     
     // 
@@ -47,6 +48,7 @@ public:
     node->get_parameter(plugin_name + ".wait_for_rotation",    _wait_for_rotation);
     node->get_parameter(plugin_name + ".max_vel_lin",          _max_vel_lin);
     node->get_parameter(plugin_name + ".max_vel_ang",          _max_vel_ang);
+    node->get_parameter(plugin_name + ".orientation_offset",   _orientation_offset);
     node->get_parameter(plugin_name + ".orientation_target",   _orientation_target);
 
     RCLCPP_INFO(_logger, "angular_boost: %f", _angular_boost);
@@ -54,6 +56,7 @@ public:
     RCLCPP_INFO(_logger, "wait_for_rotation: %f", _wait_for_rotation);
     RCLCPP_INFO(_logger, "max_vel_lin: %f m",       _max_vel_lin);
     RCLCPP_INFO(_logger, "max_vel_ang: %f m",       _max_vel_ang);
+    RCLCPP_INFO(_logger, "orientation_offset: %d ", (int)_orientation_offset);
     RCLCPP_INFO(_logger, "orientation_target: %s", _orientation_target.c_str());
     
     
@@ -70,6 +73,8 @@ public:
   {
     // if(local_path.poses.empty())
       // RCLCPP_INFO(_logger, "local path size: %d", (int)local_path.poses.size());
+    assert(!local_path.poses.empty());
+
 
     if(local_path.poses.size() == 1)
     {
@@ -85,6 +90,14 @@ public:
     Pose2 t_pose(local_path.poses.front().pose);
 
     Eigen::Vector2d t_vec = t_pose.position - r_pose.position;
+
+    //aply orientation offset (sets orientation from a future pose in path)
+    auto tmp_idx = std::min(_orientation_offset, (int)local_path.poses.size() - 1);
+    Pose2 tmp_pose(local_path.poses[tmp_idx].pose);
+
+    t_pose.orientation_vec = tmp_pose.orientation_vec;
+    t_pose.rotation = tmp_pose.rotation;
+
 
     // RCLCPP_INFO(_logger, "len t_vec: %f", t_vec.norm());
     // RCLCPP_INFO(_logger, "end_appr_scale: %f", end_approach_scale);
@@ -199,6 +212,7 @@ protected:
   double      _wait_for_rotation = 1.0; ///< value 0.0..1.0  -> 0: finishes rotation bevor moving linear, 1: moves linear undependend from rotation status
   double      _max_vel_lin       = 1.0;
   double      _max_vel_ang       = 1.0; 
+  int         _orientation_offset = 15;
   std::string _orientation_target = "by_next";  ///< target of orientation while moving: by orientation defined in path -> "by_path", toward next path element -> "by_next"
 };
 
