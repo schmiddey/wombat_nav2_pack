@@ -91,7 +91,7 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
   msg.twist = velocity;
 
 
-  // RCLCPP_INFO(_logger, "pose_in frame: %s", pose.header.frame_id.c_str());
+  RCLCPP_INFO(_logger, "pose_in frame: %s", pose.header.frame_id.c_str());
 
   auto goal_is_reached = goal_checker->isGoalReached(pose.pose, _global_path.poses.back().pose, velocity);
   if(goal_is_reached)
@@ -130,7 +130,7 @@ void WombatLocalPlanner::setPlan(const nav_msgs::msg::Path& path)
 {
   _pub->publish_global_plan(path);
   _global_path = path;
-  RCLCPP_INFO(_logger, "Got new Path... size: %d, length: %f m:", static_cast<int>(path.poses.size()), wombat::Utility::computePathLength(path));
+  RCLCPP_INFO(_logger, "Got new Path... -- frame: %s  --  size: %d, length: %f m:", path.header.frame_id.c_str(), static_cast<int>(path.poses.size()), wombat::Utility::computePathLength(path));
 }
 
 
@@ -178,6 +178,7 @@ nav_msgs::msg::Path WombatLocalPlanner::prepareGlobalPath(const geometry_msgs::m
   }
   //trim global path by the points outside the local costmap
   auto* costmap = _costmap_ros->getCostmap();
+
   double dist_threshold = std::max(costmap->getSizeInCellsX(), costmap->getSizeInCellsY()) * costmap->getResolution() / 2.0;
   
   //min dist for first path element
@@ -231,6 +232,8 @@ nav_msgs::msg::Path WombatLocalPlanner::prepareGlobalPath(const geometry_msgs::m
   }
 
   transformed_global_path = wombat::TfUtility::transform(_tf, transformed_global_path, _costmap_ros->getGlobalFrameID(), _tf_tolerance).value_or(nav_msgs::msg::Path());
+
+  RCLCPP_INFO(_logger, "_costmap_ros->getGlobalFrameID(): %s", _costmap_ros->getGlobalFrameID().c_str());
 
   if (transformed_global_path.poses.empty()) {
     throw nav2_core::PlannerException("Resulting plan has 0 poses in it.");

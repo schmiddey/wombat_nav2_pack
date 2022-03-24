@@ -18,6 +18,8 @@
 
 #include "wombat_utility/tf_utility.hpp"
 #include "wombat_utility/utility.hpp"
+#include "wombat_utility/wombatPath2.hpp"
+#include "wombat_utility/wombatLocalPath2.hpp"
 
 #include "base_controller.hpp"
 #include "mecanum_controller.hpp"
