@@ -1,7 +1,10 @@
 {
   "files.associations": {
     "string": "cpp",
-    "dense": "cpp"
+    "dense": "cpp",
+    "unordered_map": "cpp",
+    "unordered_set": "cpp",
+    "regex": "cpp"
   },
   "C_Cpp.intelliSenseCachePath": "${workspaceFolder}/.vscode"
 
