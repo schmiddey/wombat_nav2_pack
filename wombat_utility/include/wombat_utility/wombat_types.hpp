@@ -108,5 +108,12 @@ using Point2 = Eigen::Vector2d;
 
 } // namespace wombat
 
+//overload output operator
+std::ostream& operator<<(std::ostream& os, const wombat::Pose2& pose)
+{
+  os << "(" << pose.position.x() << ", " << pose.position.y() << ")";
+  return os;
+}
+
 
 #endif  //WOMBAT_TYPES_H_

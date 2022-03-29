@@ -64,15 +64,6 @@ public:
   
 protected:
 
-  /**
-   * @brief prepare / trim / transform global path as in dwb controller
-   * 
-   * @todo if target pose from path is closer than local target dist return final pose
-   * 
-   * @param robot_pose 
-   * @return nav_msgs::msg::Path 
-   */
-  nav_msgs::msg::Path prepareGlobalPath(const geometry_msgs::msg::PoseStamped& robot_pose, const nav_msgs::msg::Path& global_path) const;
 
 protected: 
   rclcpp_lifecycle::LifecycleNode::WeakPtr       _node;
@@ -88,7 +79,6 @@ protected:
   std::unique_ptr<wombat::BaseController> _controller;
 
   //-- Params --
-  // rclcpp::Duration _tf_tolerance;
   rclcpp::Duration _tf_tolerance{0, 0};
   double           _local_target_dist   = 0.2;  //dist a path element is defined as reached
   double           _local_path_max_dist = 50.0;
@@ -101,9 +91,12 @@ protected:
 
 
   
-  nav_msgs::msg::Path _global_path;
-  nav_msgs::msg::Path _local_path_unmodified;
+  nav_msgs::msg::Path _global_path_unmodified;
+  // nav_msgs::msg::Path _local_path_unmodified;
   // nav_msgs::msg::Path _transformed_global_plan;
+
+  std::shared_ptr<wombat::LocalPath2> _local_path;
+
   // -- -- 
   std::unique_ptr<wombat::LifecylePubHandler> _pub;
 };

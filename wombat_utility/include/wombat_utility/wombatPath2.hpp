@@ -46,13 +46,17 @@ public:
   {
     nav_msgs::msg::Path ros_path;
     ros_path.header = _header;
-    std::transform(_poses.begin(), _poses.end(), ros_path.poses.begin(),
-                   [&](const auto& pose) -> geometry_msgs::msg::PoseStamped {
-                        geometry_msgs::msg::PoseStamped ret;
-                        ret.header = _header;
-                        ret.pose = pose.toRosPose();
-                        return ret; 
-                      });   
+    ros_path.poses.reserve(_poses.size());
+
+    for(const auto& pose : _poses)
+    {
+      geometry_msgs::msg::PoseStamped ros_pose;
+      ros_pose.header = _header;
+      ros_pose.pose = pose.toRosPose();
+      ros_path.poses.push_back(ros_pose);
+    }
+
+    assert(ros_path.poses.size() == _poses.size());
 
     return ros_path;
   }
@@ -60,16 +64,14 @@ public:
   void fromRosPath(const nav_msgs::msg::Path& ros_path)
   {
     _header = ros_path.header;
-    // _poses.reserve(ros_path.poses.size());
-    // for(auto& e : ros_path.poses)
-    // {
-    //   _poses.push_back(Pose2(e.pose));
-    // }
-    std::transform(ros_path.poses.begin(), ros_path.poses.end(), _poses.begin(),
-                   [](auto& ros_pose) -> Pose2 { return Pose2(ros_pose.pose); });
+    _poses.reserve(ros_path.poses.size());
+
+    for(auto& e : ros_path.poses)
+    {
+      _poses.push_back(Pose2(e.pose));
+    }
 
     assert(ros_path.poses.size() == _poses.size());
-
   }
 
   /**
@@ -77,12 +79,29 @@ public:
    * 
    * @return double 
    */
-  double computePathLength(const std::size_t idx_begin = 0) const
+  double computePathLength(const std::size_t idx_begin = 0, const std::size_t idx_end = 0) const
+  {
+    //bounds are checked in this function
+    return this->computePathLength(_poses.begin() + idx_begin, _poses.begin() + idx_end);
+  }
+  
+  double computePathLength(const std::vector<Pose2>::const_iterator it_begin, const std::vector<Pose2>::const_iterator it_end) const
   {
     double dist = 0.0;
-    for(unsigned int i = idx_begin + 1; i < _poses.size(); i++)
+    auto tmp_it_end = it_end;
+    //check bounds
+    if(tmp_it_end > _poses.end())
     {
-      dist += (_poses[i].position - _poses[i-1].position).norm();
+      tmp_it_end = _poses.end();
+    }
+    if(it_begin > tmp_it_end)
+    {
+      return dist;
+    }
+
+    for(auto it = it_begin + 1; it != tmp_it_end; it++)
+    {
+      dist += (it->position - (it-1)->position).norm();
     }
     return dist;
   }
@@ -91,7 +110,7 @@ public:
    * @brief returns a path defined by given iterators
    * 
    */
-  Path2 subset(const std::size_t idx_begin = 0, const std::size_t idx_end = 0)
+  Path2 subset(const std::size_t idx_begin = 0, const std::size_t idx_end = 0) const
   {
     auto tmp_idx_begin = idx_begin;
     auto tmp_idx_end = idx_end;
@@ -100,16 +119,39 @@ public:
       tmp_idx_end = _poses.size() - 1;
     }
 
-    //todo prove bounds
-    if(idx_begin >= idx_end)
-    {
-      tmp_idx_begin = 0;
-    }
+    return this->subset(_poses.begin() + tmp_idx_begin, _poses.begin() + tmp_idx_end);
+  }
 
+  /**
+   * @brief returns a path defined by given iterators
+   * 
+   */
+  Path2 subset(const std::vector<Pose2>::const_iterator it_begin, const std::vector<Pose2>::const_iterator it_end) const
+  {
     Path2 sub_path;
     sub_path._header = this->_header;
-    sub_path._poses = decltype(_poses)(_poses.begin() + tmp_idx_begin, _poses.begin() + tmp_idx_end);
 
+    auto tmp_it_end = it_end;
+    //check bounds
+    if(tmp_it_end > _poses.end())
+    {
+      tmp_it_end = _poses.end();
+    }
+    if(it_begin > tmp_it_end)
+    {
+      return sub_path;
+    }
+    
+    try
+    {
+      sub_path._poses = decltype(_poses)(it_begin, tmp_it_end);
+    }
+    catch(const std::exception& e)
+    {
+      // std::cerr << e.what() << '\n';
+      sub_path.poses().clear(); 
+      return sub_path;  //return empty path
+    }
     return sub_path;
   }
 
@@ -133,6 +175,11 @@ public:
     return _header;
   }
 
+  std::size_t size() const
+  {
+    return _poses.size();
+  }
+
 private:
   std_msgs::msg::Header _header;
   std::vector<Pose2> _poses;
@@ -144,3 +191,5 @@ private:
 } // namespace wombat
 
 #endif  //WOMBATPATH2_H_
+
+

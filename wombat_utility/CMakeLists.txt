@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 project(wombat_utility)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
+  add_compile_options(-Wall -Wextra -Wpedantic -O2)
 endif()
 
 # find dependencies
@@ -31,6 +31,20 @@ if(BUILD_TESTING)
   #set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
+
+#add include
+include_directories(include)
+
+set(deps ament_cmake rclcpp std_msgs visualization_msgs nav2_util nav2_msgs nav_msgs geometry_msgs builtin_interfaces tf2_ros tf2 nav2_costmap_2d)
+
+# tmp test TODO add default unit tests
+add_executable(wombat_utility_test  src/test_node.cpp)
+ament_target_dependencies(wombat_utility_test ${deps})
+
+install(TARGETS wombat_utility_test
+        DESTINATION lib/${PROJECT_NAME})
+
+
 
 install(DIRECTORY include/
   DESTINATION include/

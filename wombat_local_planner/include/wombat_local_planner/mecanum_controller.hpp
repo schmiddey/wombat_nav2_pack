@@ -67,16 +67,16 @@ public:
     this->setOrientationMode(_orientation_target);
   }
 
-  virtual geometry_msgs::msg::TwistStamped control(const geometry_msgs::msg::PoseStamped& robot_pose,
-                                                   const nav_msgs::msg::Path& local_path,
-                                                   const double end_approach_scale) override
+  virtual geometry_msgs::msg::Twist control(const Pose2& robot_pose,
+                                            const std::shared_ptr<LocalPath2>& local_path,
+                                            const double end_approach_scale) override
   {
     // if(local_path.poses.empty())
       // RCLCPP_INFO(_logger, "local path size: %d", (int)local_path.poses.size());
-    assert(!local_path.poses.empty());
+    assert(!local_path->path().poses().empty());
 
 
-    if(local_path.poses.size() == 1)
+    if(local_path->path().size() == 1)
     {
       this->setOrientationMode("by_path");
     }
@@ -85,18 +85,21 @@ public:
       this->setOrientationMode(_orientation_target);
     }
 
-    Pose2 r_pose(robot_pose.pose);
+    // Pose2 r_pose(robot_pose.pose);
 
-    Pose2 t_pose(local_path.poses.front().pose);
+    // Pose2 t_pose(local_path.poses.front().pose);
+    auto t_pose = local_path->getLocalTarget();
 
-    Eigen::Vector2d t_vec = t_pose.position - r_pose.position;
+    Eigen::Vector2d t_vec = t_pose.position - robot_pose.position;
 
+
+    //todo for now no offset available
     //aply orientation offset (sets orientation from a future pose in path)
-    auto tmp_idx = std::min(_orientation_offset, (int)local_path.poses.size() - 1);
-    Pose2 tmp_pose(local_path.poses[tmp_idx].pose);
+    // auto tmp_idx = std::min(_orientation_offset, (int)(local_path->path().size() - 1));
+    // // auto tmp_pose = local_path.path();
 
-    t_pose.orientation_vec = tmp_pose.orientation_vec;
-    t_pose.rotation = tmp_pose.rotation;
+    // t_pose.orientation_vec = tmp_pose.orientation_vec;
+    // t_pose.rotation = tmp_pose.rotation;
 
 
     // RCLCPP_INFO(_logger, "len t_vec: %f", t_vec.norm());
@@ -113,14 +116,14 @@ public:
 
     // vel_lin *= 0.2;
     //roate vel_lin by robot orientaion
-    Eigen::Rotation2Dd neg_r_rot(r_pose.rotation.smallestAngle() * -1);
+    Eigen::Rotation2Dd neg_r_rot(robot_pose.rotation.smallestAngle() * -1);
     vel_lin = neg_r_rot * vel_lin;
     
     double vel_ang = 0.0;
 
     if(_fcn_computeAngularVel)
     {
-      vel_ang = _fcn_computeAngularVel(r_pose, t_pose).smallestAngle();
+      vel_ang = _fcn_computeAngularVel(robot_pose, t_pose).smallestAngle();
     }
     else
     {
@@ -137,17 +140,15 @@ public:
     vel_ang *= _angular_boost;
     vel_ang = Utility::constrain(vel_ang, -1.0, 1.0);
 
-    geometry_msgs::msg::TwistStamped cmd;
-    cmd.header.frame_id = "todo";
-    cmd.header.stamp    = robot_pose.header.stamp; //todo
+    geometry_msgs::msg::Twist cmd;
 
     //aply max vel
     vel_lin *= _max_vel_lin;
     vel_ang *= _max_vel_ang;
 
-    cmd.twist.linear.x = vel_lin.x();
-    cmd.twist.linear.y = vel_lin.y();
-    cmd.twist.angular.z = vel_ang;
+    cmd.linear.x = vel_lin.x();
+    cmd.linear.y = vel_lin.y();
+    cmd.angular.z = vel_ang;
     return cmd;
   }
  

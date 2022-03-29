@@ -45,16 +45,41 @@ public:
     this->determineLocalPath(robot_pose);
   }
 
-  Path2 getLocalPath() const
+
+  double localPathLength_from_begin() const
+  {
+    return _path.computePathLength(_it_begin, _it_end);
+  }
+  double localPathLength_from_target() const
+  {
+    return _path.computePathLength(_it_target, _it_end);
+  }
+
+  const Path2& path() const
+  { 
+    return _path;
+  }
+
+  Path2& path()
+  { 
+    return _path;
+  }
+
+  Path2 extractLocalPath() const
   {
     std::vector<Pose2> local_path(_it_begin, _it_end);
 
     return Path2(_path.header(), local_path);
   }
 
-  const Pose2& getTarget() const 
+  const Pose2& getLocalTarget() const 
   {
     return *_it_target;
+  }
+
+  const Pose2& getFinalTarget() const
+  {
+    return _path.poses().back();
   }
 
 private:
@@ -68,6 +93,12 @@ private:
                               [&](const Pose2& plan_pose) -> bool{
                                 return (robot_pose.position - plan_pose.position).squaredNorm() >= sq_target_dist;
                               });
+
+    if(_it_target == _path.poses().end() && _path.poses().size() > 0)
+    {
+      _it_target = _path.poses().end() - 1;
+    }
+
 
     //todo prove if element dist is much greater than target dist, then interpolate (when path has not many elements)
 
@@ -93,7 +124,24 @@ private:
                            [&](const Pose2& plan_pose) -> bool{
                              return (robot_pose.position - plan_pose.position).squaredNorm() >= sq_max_dist;
                            });
-    
+
+    if(_it_end == _path.poses().end() && _path.poses().size() > 0)
+    {
+      _it_end = _path.poses().end() - 1;
+    }
+
+    auto dist_to_target = (robot_pose.position - _it_target->position).norm();
+
+    for(unsigned int i = 0; i < _path.size(); i++)
+    {
+      std::cout << i << ": " << _path.poses()[i] << std::endl;
+    }
+
+    std::cout << "size _path: " << _path.size() << std::endl;
+    std::cout << "_it_begin: " << std::distance(_path.poses().begin(), _it_begin) << std::endl;
+    std::cout << "_it_target: " << std::distance(_path.poses().begin(), _it_target) << std::endl;
+    std::cout << "_it_end: " << std::distance(_path.poses().begin(), _it_end) << std::endl;
+    std::cout << "dist_to_target: " << dist_to_target << std::endl;
   }
 
 private:
