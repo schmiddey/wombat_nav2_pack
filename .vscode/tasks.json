@@ -22,8 +22,9 @@
       "description": "pkgs from this meta pkg",
       "options": [
         "wombat_local_planner",
-        "wombat_utility"
+        "wombat_utility",
+        "wombat_waypoint"
       ]
     }
   ]
-}y
+}

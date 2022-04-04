@@ -10,6 +10,8 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>wombat_local_palnenr</depend>
+  <depend>wombat_utility</depend> 
+  <depend>wombat_waypoint</depend>
   <!-- add morg sub pgd deps -->
 
   <export>

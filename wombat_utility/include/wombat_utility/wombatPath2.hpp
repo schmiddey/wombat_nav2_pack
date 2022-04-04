@@ -75,7 +75,7 @@ public:
   }
 
   /**
-   * @brief computes path length beween fiven iterators
+   * @brief computes path length beween given iterators
    * 
    * @return double 
    */
@@ -88,18 +88,18 @@ public:
   double computePathLength(const std::vector<Pose2>::const_iterator it_begin, const std::vector<Pose2>::const_iterator it_end) const
   {
     double dist = 0.0;
-    auto tmp_it_end = it_end;
+    auto tmp_it_end = it_end + 1; //+1 because we want to include the last pose
     //check bounds
     if(tmp_it_end > _poses.end())
     {
       tmp_it_end = _poses.end();
     }
-    if(it_begin > tmp_it_end)
+    if(it_begin >= tmp_it_end)
     {
-      return dist;
+      return dist;  //return zero dist
     }
 
-    for(auto it = it_begin + 1; it != tmp_it_end; it++)
+    for(auto it = it_begin + 1; it != tmp_it_end; ++it)
     {
       dist += (it->position - (it-1)->position).norm();
     }
@@ -131,15 +131,21 @@ public:
     Path2 sub_path;
     sub_path._header = this->_header;
 
-    auto tmp_it_end = it_end;
+    auto tmp_it_end = it_end + 1; //+1 because we want to include the given element
     //check bounds
+    if(tmp_it_end == _poses.end())
+    {
+      std::cout << "+++++++ qeual than end in subset" << std::endl;
+    }
+
     if(tmp_it_end > _poses.end())
     {
+      std::cout << "+++++++ greater than end in subset" << std::endl;
       tmp_it_end = _poses.end();
     }
-    if(it_begin > tmp_it_end)
+    if(it_begin >= tmp_it_end)
     {
-      return sub_path;
+      return sub_path;  //return empty path
     }
     
     try
@@ -178,6 +184,11 @@ public:
   std::size_t size() const
   {
     return _poses.size();
+  }
+
+  bool empty() const
+  {
+    return _poses.empty();
   }
 
 private:

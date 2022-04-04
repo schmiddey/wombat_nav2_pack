@@ -67,9 +67,12 @@ public:
 
   Path2 extractLocalPath() const
   {
-    std::vector<Pose2> local_path(_it_begin, _it_end);
+    return _path.subset(_it_begin, _it_end);
+  }
 
-    return Path2(_path.header(), local_path);
+  const Pose2& getnearestPose() const
+  {
+    return *_it_begin;
   }
 
   const Pose2& getLocalTarget() const 
@@ -81,6 +84,29 @@ public:
   {
     return _path.poses().back();
   }
+
+  //iterators
+  const std::vector<Pose2>::const_iterator iteratorLocalBegin() const
+  {
+    return _it_begin;
+  }
+
+  const std::vector<Pose2>::const_iterator iteratorLocalTarget() const
+  {
+    return _it_target;
+  }
+
+  const std::vector<Pose2>::const_iterator iteratorLocalEnd() const
+  {
+    return _it_end;
+  }
+
+
+  bool empty() const
+  {
+    return _path.empty();
+  }
+
 
 private:
   void determineLocalPath(const Pose2& robot_pose)
@@ -94,9 +120,10 @@ private:
                                 return (robot_pose.position - plan_pose.position).squaredNorm() >= sq_target_dist;
                               });
 
-    if(_it_target == _path.poses().end() && _path.poses().size() > 0)
+    if(_it_target == _path.poses().end() && !_path.empty())
     {
-      _it_target = _path.poses().end() - 1;
+      std::cout << "---- reached end (target)" << std::endl;
+      --_it_target;
     }
 
 
@@ -106,7 +133,7 @@ private:
     //iterate over all elements from begin until transformation_begin (element at target range) and find element with min dist
     double min_dist = sq_target_dist * 4;
     auto it_min = _it_begin;
-    for(auto it = _it_begin; it != _it_target; ++it)
+    for(auto it = _it_begin; it != (_it_target+1); ++it) 
     {
       auto sq_dist = (robot_pose.position - it->position).squaredNorm();
       if(sq_dist < min_dist)
@@ -118,6 +145,7 @@ private:
     _it_begin = it_min;
 
 
+
     //find first element further than max_dist //todo maybe prove if is is costmap rect
     auto sq_max_dist = _max_dist * _max_dist;
     _it_end = std::find_if(_it_begin, _path.poses().end(),
@@ -125,12 +153,14 @@ private:
                              return (robot_pose.position - plan_pose.position).squaredNorm() >= sq_max_dist;
                            });
 
-    if(_it_end == _path.poses().end() && _path.poses().size() > 0)
+    if(_it_end == _path.poses().end() && !_path.empty())
     {
-      _it_end = _path.poses().end() - 1;
+      std::cout << "+++++++++ reached end (end)" << std::endl;
+      --_it_end;
     }
 
-    auto dist_to_target = (robot_pose.position - _it_target->position).norm();
+  //debug
+  auto dist_to_target = (robot_pose.position - _it_target->position).norm();
 
     for(unsigned int i = 0; i < _path.size(); i++)
     {
@@ -154,9 +184,9 @@ private:
 
   
 
-  decltype(_path.poses().begin()) _it_begin ;   //< iterator of path element nearest to robot (always towards target)
-  decltype(_path.poses().begin()) _it_target;   //< iterator of path element at defined target range, first element past target range
-  decltype(_path.poses().begin()) _it_end   ;   //< iterator of path element at the end of the local path, fist element past max range
+  std::vector<wombat::Pose2>::iterator _it_begin ;   //< iterator of path element nearest to robot (always towards target)
+  std::vector<wombat::Pose2>::iterator _it_target;   //< iterator of path element at defined target range, first element past target range
+  std::vector<wombat::Pose2>::iterator _it_end   ;   //< iterator of path element at the end of the local path, fist element past max range
 
 };
 

@@ -96,10 +96,14 @@ public:
     //todo for now no offset available
     //aply orientation offset (sets orientation from a future pose in path)
     // auto tmp_idx = std::min(_orientation_offset, (int)(local_path->path().size() - 1));
-    // // auto tmp_pose = local_path.path();
+    auto it_offset_offset = local_path->iteratorLocalTarget() + _orientation_offset;
+    if(it_offset_offset > local_path->iteratorLocalEnd())
+    {
+      it_offset_offset = local_path->iteratorLocalEnd();
+    }
 
-    // t_pose.orientation_vec = tmp_pose.orientation_vec;
-    // t_pose.rotation = tmp_pose.rotation;
+    t_pose.orientation_vec = it_offset_offset->orientation_vec;
+    t_pose.rotation = it_offset_offset->rotation;
 
 
     // RCLCPP_INFO(_logger, "len t_vec: %f", t_vec.norm());

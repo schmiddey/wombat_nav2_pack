@@ -31,6 +31,8 @@
 *.out
 *.app
 
+#python stuff
+__pycache__
 
 #vscode cache
 .vscode/ipch/
