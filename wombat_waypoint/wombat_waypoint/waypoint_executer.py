@@ -40,6 +40,10 @@ class WaypointExecuterNode(Node):
     self.autostart    = self.get_parameter('autostart').get_parameter_value().bool_value
     self.shuffle_when_rdy = self.get_parameter('shuffle_when_rdy').get_parameter_value().bool_value
 
+    self.current_wp_idx = 0
+
+    self.start_time = self.get_clock().now().to_msg()
+
     #load waypoints
     file_ok = self.wp_handler.load(self.wp_file)
     if not file_ok:
@@ -133,9 +137,19 @@ class WaypointExecuterNode(Node):
 
 
   def feedback_callback(self, feedback_msg):
-    self.get_logger().info('Feedback received')
-    print("Current Waypoint: ", feedback_msg.feedback.current_waypoint)
+    # self.get_logger().info('Feedback received')
+    # print("Current Waypoint: ", feedback_msg.feedback.current_waypoint)
+    curr_wp = feedback_msg.feedback.current_waypoint
+    if curr_wp != self.current_wp_idx:
+      self.get_logger().info('Arrived at Waypoint: ' + str(self.current_wp_idx) + '  --  Next Waypoint: ' + str(curr_wp))
+      self.current_wp_idx = curr_wp
+      pass
 
+  def printElapsedTime(self):
+    now = self.get_clock().now().to_msg()
+    elapsed_time = now.sec - self.start_time.sec
+    self.get_logger().info('Elapsed time: ' + str(elapsed_time) + 's')
+    pass
 
 def main(args=None):
   rclpy.init(args=args)
@@ -146,7 +160,7 @@ def main(args=None):
   except KeyboardInterrupt:
     pass
 
-  print("hans")
+  node.printElapsedTime()
   node.stop()
 
   node.destroy_node()

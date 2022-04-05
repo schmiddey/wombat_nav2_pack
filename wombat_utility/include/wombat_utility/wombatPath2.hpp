@@ -114,11 +114,11 @@ public:
   {
     auto tmp_idx_begin = idx_begin;
     auto tmp_idx_end = idx_end;
-    if(idx_end >= _poses.size() || idx_end == 0)
-    {
-      tmp_idx_end = _poses.size() - 1;
-    }
-
+    // if(idx_end >= _poses.size() || idx_end == 0)
+    // {
+    //   tmp_idx_end = _poses.size() - 1;
+    // }
+    //bounds are checked in this fuction
     return this->subset(_poses.begin() + tmp_idx_begin, _poses.begin() + tmp_idx_end);
   }
 
@@ -133,14 +133,14 @@ public:
 
     auto tmp_it_end = it_end + 1; //+1 because we want to include the given element
     //check bounds
-    if(tmp_it_end == _poses.end())
-    {
-      std::cout << "+++++++ qeual than end in subset" << std::endl;
-    }
+    // if(tmp_it_end == _poses.end())
+    // {
+    //   std::cout << "+++++++ qeual than end in subset" << std::endl;
+    // }
 
     if(tmp_it_end > _poses.end())
     {
-      std::cout << "+++++++ greater than end in subset" << std::endl;
+      // std::cout << "+++++++ greater than end in subset" << std::endl;
       tmp_it_end = _poses.end();
     }
     if(it_begin >= tmp_it_end)

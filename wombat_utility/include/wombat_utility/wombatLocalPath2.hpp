@@ -70,7 +70,7 @@ public:
     return _path.subset(_it_begin, _it_end);
   }
 
-  const Pose2& getnearestPose() const
+  const Pose2& getNearestPose() const
   {
     return *_it_begin;
   }
@@ -122,7 +122,7 @@ private:
 
     if(_it_target == _path.poses().end() && !_path.empty())
     {
-      std::cout << "---- reached end (target)" << std::endl;
+      // std::cout << "---- reached end (target)" << std::endl;
       --_it_target;
     }
 
@@ -155,23 +155,23 @@ private:
 
     if(_it_end == _path.poses().end() && !_path.empty())
     {
-      std::cout << "+++++++++ reached end (end)" << std::endl;
+      // std::cout << "+++++++++ reached end (end)" << std::endl;
       --_it_end;
     }
 
-  //debug
-  auto dist_to_target = (robot_pose.position - _it_target->position).norm();
+    //debug
+    // auto dist_to_target = (robot_pose.position - _it_target->position).norm();
 
-    for(unsigned int i = 0; i < _path.size(); i++)
-    {
-      std::cout << i << ": " << _path.poses()[i] << std::endl;
-    }
+    // for(unsigned int i = 0; i < _path.size(); i++)
+    // {
+    //   std::cout << i << ": " << _path.poses()[i] << std::endl;
+    // }
 
-    std::cout << "size _path: " << _path.size() << std::endl;
-    std::cout << "_it_begin: " << std::distance(_path.poses().begin(), _it_begin) << std::endl;
-    std::cout << "_it_target: " << std::distance(_path.poses().begin(), _it_target) << std::endl;
-    std::cout << "_it_end: " << std::distance(_path.poses().begin(), _it_end) << std::endl;
-    std::cout << "dist_to_target: " << dist_to_target << std::endl;
+    // std::cout << "size _path: " << _path.size() << std::endl;
+    // std::cout << "_it_begin: " << std::distance(_path.poses().begin(), _it_begin) << std::endl;
+    // std::cout << "_it_target: " << std::distance(_path.poses().begin(), _it_target) << std::endl;
+    // std::cout << "_it_end: " << std::distance(_path.poses().begin(), _it_end) << std::endl;
+    // std::cout << "dist_to_target: " << dist_to_target << std::endl;
   }
 
 private:

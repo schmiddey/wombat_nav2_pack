@@ -86,11 +86,11 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
                                                                              const geometry_msgs::msg::Twist& velocity, 
                                                                              nav2_core::GoalChecker* goal_checker) 
 {
-  RCLCPP_INFO(_logger, "compute vel cmd");
+  // RCLCPP_INFO(_logger, "compute vel cmd");
 
   geometry_msgs::msg::TwistStamped msg;
 
-  RCLCPP_INFO(_logger, "pose_in frame: %s", pose.header.frame_id.c_str());
+  // RCLCPP_INFO(_logger, "pose_in frame: %s", pose.header.frame_id.c_str());
   auto robot_pose = wombat::Pose2(pose.pose);
 
   
@@ -125,7 +125,6 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
   //prove if tmp_local path is empty
   if(tmp_local_path.empty())
   {
-    assert(false);
     RCLCPP_INFO(_logger, "tmp_local_path is empty");
     msg.header = pose.header;
     msg.header.frame_id = "todo";
@@ -138,11 +137,11 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
     return msg;
   }
 
-  std::cout << "--" << std::endl;
-  std::cout << "size_tmp_local_path:         " << tmp_local_path.size() << std::endl;
-  std::cout << "final target:                " << _local_path->getFinalTarget() << std::endl;
-  std::cout << "last target from local_path: " << tmp_local_path.poses().back() << std::endl;
-  std::cout << "--" << std::endl;
+  // std::cout << "--" << std::endl;
+  // std::cout << "size_tmp_local_path:         " << tmp_local_path.size() << std::endl;
+  // std::cout << "final target:                " << _local_path->getFinalTarget() << std::endl;
+  // std::cout << "last target from local_path: " << tmp_local_path.poses().back() << std::endl;
+  // std::cout << "--" << std::endl;
   _pub->publish_local_plan(tmp_local_path.toRosPath());
 
   // //tmp fix for cropped path
@@ -157,7 +156,7 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
   }
 
   // RCLCPP_INFO(_logger, "end_approach_scale(0.0..1.0): %f", end_approach_scale);
-  std::cout << "end_approach_scale: " << end_approach_scale << std::endl;
+  // std::cout << "end_approach_scale: " << end_approach_scale << std::endl;
 
   msg.twist = _controller->control(robot_pose, _local_path, end_approach_scale);
 
