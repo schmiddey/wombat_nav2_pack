@@ -2,27 +2,31 @@
 #define WOMBAT_LOCAL_PLANNER_H_
 
 
+#include <memory>
 #include <string>
 #include <vector>
 
-#include "rclcpp/rclcpp.hpp"
+#include <rclcpp/rclcpp.hpp>
 
-#include "nav2_core/controller.hpp"
-#include "nav2_core/exceptions.hpp"
-#include "nav2_util/node_utils.hpp"
+#include <nav2_core/controller.hpp>
+#include <nav2_core/exceptions.hpp>
+#include <nav2_util/node_utils.hpp>
 
-#include "pluginlib/class_loader.hpp"
-#include "pluginlib/class_list_macros.hpp"
+#include <pluginlib/class_loader.hpp>
+#include <pluginlib/class_list_macros.hpp>
 
 #include "lifecycle_publisher.hpp"
 
-#include "wombat_utility/tf_utility.hpp"
-#include "wombat_utility/utility.hpp"
-#include "wombat_utility/wombatPath2.hpp"
-#include "wombat_utility/wombatLocalPath2.hpp"
+#include <wombat_utility/tf_utility.hpp>
+#include <wombat_utility/utility.hpp>
+#include <wombat_utility/wombatPath2.hpp>
+#include <wombat_utility/wombatLocalPath2.hpp>
+
+#include <wombat_utility/wombatCostmap2Extend.hpp>
 
 #include "base_controller.hpp"
 #include "mecanum_controller.hpp"
+// #include "collision_checker.hpp"
 
 namespace wombat_local_planner{
 
@@ -96,6 +100,7 @@ protected:
   // nav_msgs::msg::Path _transformed_global_plan;
 
   std::shared_ptr<wombat::LocalPath2> _local_path;
+  // std::unique_ptr<wombat::CollisionChecker> _collision_checker;
 
   // -- -- 
   std::unique_ptr<wombat::LifecylePubHandler> _pub;

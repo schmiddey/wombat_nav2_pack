@@ -31,11 +31,13 @@ public:
 
   void publish_global_plan(const nav_msgs::msg::Path& path);
   void publish_local_plan(const nav_msgs::msg::Path& path);
+  void publish_local_plan_unmodified(const nav_msgs::msg::Path& path);
   void publish_dbg_string(const std::string& msg);
   
 private:
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>> _pub_global_path;
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>> _pub_local_path;
+  std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>> _pub_local_path_unmodified;
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<std_msgs::msg::String>> _pub_dbg_string;
 
   rclcpp_lifecycle::LifecycleNode::WeakPtr _node;

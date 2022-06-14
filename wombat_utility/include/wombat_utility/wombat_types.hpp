@@ -3,11 +3,13 @@
 
 #include <iostream>
 #include <algorithm>
+#include <ostream>
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/header.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "nav_msgs/msg/path.hpp"
+#include "nav2_costmap_2d/costmap_2d.hpp"
 #include "tf2/utils.h"
 #include "tf2/transform_datatypes.h"
 #include "Eigen/Dense"
@@ -102,7 +104,92 @@ struct Pose2{
 
 using Point2 = Eigen::Vector2d;
 
+class Pixel2{
+public:
+  Pixel2() = default;
+  Pixel2(const int x, const int y):
+    _x(x),
+    _y(y)
+  { }
+  Pixel2(const nav2_costmap_2d::MapLocation& map_loc):
+    _x(static_cast<int>(map_loc.x)),
+    _y(static_cast<int>(map_loc.y))
+  { } 
+  ~Pixel2() = default;
 
+  //copy and move constructors
+  Pixel2(const Pixel2& other) = default;
+  Pixel2(Pixel2&& other) = default;
+  Pixel2& operator=(const Pixel2& rhs) = default;
+  Pixel2& operator=(Pixel2&& rhs) = default;
+
+
+
+  int x() const {return _x;}
+  int y() const {return _y;}
+  
+  int& x() {return _x;}
+  int& y() {return _y;}
+
+  Pixel2 operator+(const Pixel2& rhs)
+  {
+    return Pixel2(_x + rhs.x(), _y + rhs.y());
+  }
+
+  Pixel2 operator-(const Pixel2& rhs)
+  {
+    return Pixel2(_x - rhs.x(), _y - rhs.y());
+  }
+
+  Pixel2 operator*(const double& rhs)
+  {
+    return Pixel2(std::round(_x * rhs), std::round(_y * rhs));
+  }
+
+  Pixel2& operator+=(const Pixel2& rhs)
+  {
+    _x += rhs.x();
+    _y += rhs.y();
+    return *this;
+  }
+
+  Pixel2& operator-=(const Pixel2& rhs)
+  {
+    _x -= rhs.x();
+    _y -= rhs.y();
+    return *this;
+  }
+
+  Pixel2& operator*=(const double& rhs)
+  {
+    _x = std::round(_x * rhs);
+    _y = std::round(_x * rhs);
+    return *this;
+  }
+
+
+  bool operator==(const Pixel2& rhs) const
+  {
+    return _x == rhs.x() && _y == rhs.y();
+  }
+
+  bool operator!=(const Pixel2& rhs) const
+  {
+    return !(*this == rhs);
+  }
+
+  nav2_costmap_2d::MapLocation toMapLocation() const
+  {
+    nav2_costmap_2d::MapLocation map_loc;
+    map_loc.x = _x;
+    map_loc.y = _y;
+    return map_loc;
+  }
+
+private:
+  int _x;
+  int _y;
+};
 
 
 
@@ -115,5 +202,10 @@ std::ostream& operator<<(std::ostream& os, const wombat::Pose2& pose)
   return os;
 }
 
+std::ostream& operator<<(std::ostream& os, const wombat::Pixel2& pixel)
+{
+  os << "(" << pixel.x() << ", " << pixel.y() << ")";
+  return os;
+}
 
 #endif  //WOMBAT_TYPES_H_

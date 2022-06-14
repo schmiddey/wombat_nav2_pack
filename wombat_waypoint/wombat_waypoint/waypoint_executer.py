@@ -33,12 +33,22 @@ class WaypointExecuterNode(Node):
     self.declare_parameter('waypoint_file', 'waypoints.txt')
     self.declare_parameter('endless_loop', True)
     self.declare_parameter('autostart', True)
-    self.declare_parameter('shuffle_when_rdy', True)
+    self.declare_parameter('shuffle_when_rdy', False)
 
     self.wp_file      = self.get_parameter('waypoint_file').get_parameter_value().string_value
     self.endless_loop = self.get_parameter('endless_loop').get_parameter_value().bool_value
     self.autostart    = self.get_parameter('autostart').get_parameter_value().bool_value
     self.shuffle_when_rdy = self.get_parameter('shuffle_when_rdy').get_parameter_value().bool_value
+
+    #print prams:
+    self.get_logger().info('########################################################')
+    self.get_logger().info('#  Params  #')
+    self.get_logger().info('############')
+    self.get_logger().info('Waypoint file: ' + self.wp_file)
+    self.get_logger().info('Endless loop: ' + str(self.endless_loop))
+    self.get_logger().info('Autostart: ' + str(self.autostart))
+    self.get_logger().info('Shuffle when ready: ' + str(self.shuffle_when_rdy))
+    self.get_logger().info('########################################################')
 
     self.current_wp_idx = 0
 

@@ -81,6 +81,14 @@ void LifecylePubHandler::publish_local_plan(const nav_msgs::msg::Path& path)
   _pub_local_path->publish(path);
 }
 
+void LifecylePubHandler::publish_local_plan_unmodified(const nav_msgs::msg::Path& path) 
+{
+  if(!_pub_local_path_unmodified)
+  {
+    return;
+  }
+  _pub_local_path_unmodified->publish(path);
+}
 
 void LifecylePubHandler::publish_dbg_string(const std::string& msg)
 {

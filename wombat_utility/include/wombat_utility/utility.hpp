@@ -6,16 +6,18 @@
 #include <cmath>
 // #include <vector>
 
-#include "rclcpp/rclcpp.hpp"
-#include "std_msgs/msg/header.hpp"
-#include "geometry_msgs/msg/pose_stamped.hpp"
-#include "nav_msgs/msg/path.hpp"
-#include "tf2/utils.h"
-#include "tf2/transform_datatypes.h"
-#include "Eigen/Dense"
-#include "Eigen/Geometry"
+#include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/header.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/twist_stamped.hpp>
+#include <nav_msgs/msg/path.hpp>
+#include <tf2/utils.h>
+#include <tf2/transform_datatypes.h>
 
-#include "wombat_utility/wombat_types.hpp"
+#include <Eigen/Dense>
+#include <Eigen/Geometry>
+
+#include <wombat_utility/wombat_types.hpp>
 
 namespace wombat{
 
@@ -24,6 +26,25 @@ namespace wombat{
 
 class Utility{
 public:
+
+
+
+static inline geometry_msgs::msg::TwistStamped getEmptyTwist(const rclcpp::Time& stamp, const std::string& frame_id)
+{
+  geometry_msgs::msg::TwistStamped ret;
+  ret.header.stamp = stamp;
+  ret.header.frame_id = frame_id;
+
+  ret.twist.linear.x  = 0.0;
+  ret.twist.linear.y  = 0.0;
+  ret.twist.linear.z  = 0.0;
+  ret.twist.angular.x = 0.0;
+  ret.twist.angular.y = 0.0;
+  ret.twist.angular.z = 0.0;
+
+  return ret;
+}
+
 
 /**
  * @brief ala arduino

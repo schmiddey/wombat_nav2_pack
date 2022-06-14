@@ -4,7 +4,7 @@
     {
       "label": "colcon_build",
       "type": "shell",
-      "command": "colcon build --packages-up-to ${input:pkgs} --symlink-install",
+      "command": "colcon build --packages-up-to ${input:pkgs} --symlink-install  --cmake-args \"-DCMAKE_EXPORT_COMPILE_COMMANDS=1\" ",
       "options": {
         "cwd": "${workspaceFolder}/../../"
       },

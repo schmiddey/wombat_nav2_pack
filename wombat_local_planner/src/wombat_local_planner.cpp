@@ -99,42 +99,24 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
   if(goal_is_reached)
   {
     RCLCPP_INFO(_logger, "Goal is Reached");
-
   }
 
   //if path is empty than send zero velocity
   if(_local_path->empty())
   {
-    msg.header = pose.header;
-    msg.header.frame_id = "todo";
-    msg.twist.linear.x = 0.0;
-    msg.twist.linear.y = 0.0;
-    msg.twist.linear.z = 0.0;
-    msg.twist.angular.x = 0.0;
-    msg.twist.angular.y = 0.0;
-    msg.twist.angular.z = 0.0;
-    return msg;
+    return wombat::Utility::getEmptyTwist(pose.header.stamp, "todo");
   }
   
-
   _local_path->update(robot_pose);
-
-
+  
   //publish local path
   auto tmp_local_path = _local_path->extractLocalPath();
   //prove if tmp_local path is empty
   if(tmp_local_path.empty())
   {
     RCLCPP_INFO(_logger, "tmp_local_path is empty");
-    msg.header = pose.header;
-    msg.header.frame_id = "todo";
-    msg.twist.linear.x = 0.0;
-    msg.twist.linear.y = 0.0;
-    msg.twist.linear.z = 0.0;
-    msg.twist.angular.x = 0.0;
-    msg.twist.angular.y = 0.0;
-    msg.twist.angular.z = 0.0;
-    return msg;
+
+    return wombat::Utility::getEmptyTwist(pose.header.stamp, "todo");
   }
 
   // std::cout << "--" << std::endl;
@@ -142,6 +124,24 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
   // std::cout << "final target:                " << _local_path->getFinalTarget() << std::endl;
   // std::cout << "last target from local_path: " << tmp_local_path.poses().back() << std::endl;
   // std::cout << "--" << std::endl;
+  _pub->publish_local_plan_unmodified(tmp_local_path.toRosPath());
+
+
+
+  //modify path based on costmap and pub local path
+  // auto* cm = _costmap_ros->getCostmap();
+  // wombat::Costmap2DWombat cm(*(_costmap_ros->getCostmap())); //copy
+  // auto hans = cm.getResolution();
+
+  // if(hans > 0)
+  // {
+  //   RCLCPP_INFO(_logger, "hans: %f", hans);
+  // }
+  // else
+  // {
+  //   RCLCPP_INFO(_logger, "hans: %f", hans);
+  // }
+
   _pub->publish_local_plan(tmp_local_path.toRosPath());
 
   // //tmp fix for cropped path
@@ -155,6 +155,7 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
     end_approach_scale = wombat::Utility::rescale(final_length, 0.0, _end_approach_dist, 0.0, 1.0);
   }
 
+  
   // RCLCPP_INFO(_logger, "end_approach_scale(0.0..1.0): %f", end_approach_scale);
   // std::cout << "end_approach_scale: " << end_approach_scale << std::endl;
 
