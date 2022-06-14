@@ -26,6 +26,7 @@
 
 #include "base_controller.hpp"
 #include "mecanum_controller.hpp"
+#include "limit_accel.hpp"
 // #include "collision_checker.hpp"
 
 namespace wombat_local_planner{
@@ -101,6 +102,7 @@ protected:
 
   std::shared_ptr<wombat::LocalPath2> _local_path;
   // std::unique_ptr<wombat::CollisionChecker> _collision_checker;
+  std::unique_ptr<wombat::LimitAccel> _limit_accel;
 
   // -- -- 
   std::unique_ptr<wombat::LifecylePubHandler> _pub;

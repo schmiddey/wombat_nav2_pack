@@ -36,11 +36,19 @@ void WombatLocalPlanner::configure(const rclcpp_lifecycle::LifecycleNode::WeakPt
   nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".local_target_dist",   rclcpp::ParameterValue(0.2));
   nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".local_path_max_dist", rclcpp::ParameterValue(50.0));
   nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".end_approach_dist",   rclcpp::ParameterValue(1.0));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".max_accel_lin",       rclcpp::ParameterValue(1.0));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".max_accel_ang",       rclcpp::ParameterValue(1.0));
   // nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".transform_tolerance", rclcpp::ParameterValue(0.1));
 
   node->get_parameter(_plugin_name + ".local_target_dist",    _local_target_dist);
   node->get_parameter(_plugin_name + ".local_path_max_dist",  _local_path_max_dist);
   node->get_parameter(_plugin_name + ".end_approach_dist",    _end_approach_dist);
+
+  double max_accel_lin;
+  double max_accel_ang;
+
+  node->get_parameter(_plugin_name + ".max_accel_lin", max_accel_lin);
+  node->get_parameter(_plugin_name + ".max_accel_ang", max_accel_ang);
 
   // node->get_parameter(_plugin_name + ".end_approach_dist",    _end_approach_dist);
   
@@ -53,10 +61,15 @@ void WombatLocalPlanner::configure(const rclcpp_lifecycle::LifecycleNode::WeakPt
   RCLCPP_INFO(_logger, "local_target_dist: %f m", _local_target_dist);
   RCLCPP_INFO(_logger, "local_path_max_dist: %f m", _local_path_max_dist);
   RCLCPP_INFO(_logger, "end_approach_dist: %f m", _end_approach_dist);
+  RCLCPP_INFO(_logger, "max_accel_lin: %f m/s^2", max_accel_lin);
+  RCLCPP_INFO(_logger, "max_accel_ang: %f rad/s^2", max_accel_ang);
 
   //todo other controller via plugin!!  
   _controller = std::make_unique<wombat::MecanumController>();
   _controller->initialize(parent, name);
+
+  //limit accel
+  _limit_accel = std::make_unique<wombat::LimitAccel>(_clock, max_accel_lin, max_accel_ang);
 
   _pub->on_configure();
 
@@ -108,7 +121,7 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
   }
   
   _local_path->update(robot_pose);
-  
+
   //publish local path
   auto tmp_local_path = _local_path->extractLocalPath();
   //prove if tmp_local path is empty
@@ -159,7 +172,8 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
   // RCLCPP_INFO(_logger, "end_approach_scale(0.0..1.0): %f", end_approach_scale);
   // std::cout << "end_approach_scale: " << end_approach_scale << std::endl;
 
-  msg.twist = _controller->control(robot_pose, _local_path, end_approach_scale);
+  auto tmp_twist = _controller->control(robot_pose, _local_path, end_approach_scale);
+  msg.twist = _limit_accel->limitAccel(tmp_twist);
 
 
 
