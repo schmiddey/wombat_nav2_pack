@@ -3,11 +3,12 @@
 
 #include<optional>
 
-#include"rclcpp/rclcpp.hpp"
-#include"geometry_msgs/msg/pose_stamped.hpp"
-#include"nav_msgs/msg/path.hpp"
+#include<rclcpp/rclcpp.hpp>
+#include<geometry_msgs/msg/pose_stamped.hpp>
+#include<nav_msgs/msg/path.hpp>
 
-#include"tf2_ros/buffer.h"
+#include<tf2_ros/buffer.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 namespace wombat
 {
@@ -173,6 +174,35 @@ static std::optional<nav_msgs::msg::Path> transform(const std::shared_ptr<tf2_ro
 
   return ret_path;
 }
+
+
+static std::optional<geometry_msgs::msg::PoseStamped> lookupTransform(std::shared_ptr<tf2_ros::Buffer> tf, const std::string base_frame, const std::string target_frame)
+{
+  try
+  {
+    auto transform = tf->lookupTransform(base_frame, target_frame, tf2::TimePointZero);
+    geometry_msgs::msg::PoseStamped p;
+    p.header = transform.header;
+    p.pose.position.x = transform.transform.translation.x;
+    p.pose.position.y = transform.transform.translation.y;
+    p.pose.position.z = transform.transform.translation.z;
+    p.pose.orientation.x = transform.transform.rotation.x;
+    p.pose.orientation.y = transform.transform.rotation.y;
+    p.pose.orientation.z = transform.transform.rotation.z;
+    p.pose.orientation.w = transform.transform.rotation.w;
+    return p;
+  }
+  catch(tf2::TransformException& e)
+  {
+    // RCLCPP_ERROR(rclcpp::get_logger("tf_help"),
+    //              "Exception in lookupTransform: %s",
+    //              e.what()
+    //              );
+    return std::nullopt;
+  }
+}
+
+
 
 };
 
