@@ -38,10 +38,15 @@ public:
     auto delta_ang_z = twist.angular.z - _last_twist.angular.z;
 
     auto delta_time = (_clock->now() - _time_last_twist).seconds();
+
+    auto dir_lin_x = delta_lin_x > 0 ? 1.0 : -1.0;
+    auto dir_lin_y = delta_lin_y > 0 ? 1.0 : -1.0;
+    auto dir_ang   = delta_ang_z > 0 ? 1.0 : -1.0;
+
     
-    limited_twist.linear.x = (delta_lin_x > _max_accel_linear * delta_time) ? _last_twist.linear.x + _max_accel_linear * delta_time : twist.linear.x;
-    limited_twist.linear.y = (delta_lin_y > _max_accel_linear * delta_time) ? _last_twist.linear.y + _max_accel_linear * delta_time : twist.linear.y;
-    limited_twist.angular.z = (delta_ang_z > _max_accel_angular * delta_time) ? _last_twist.angular.z + _max_accel_angular * delta_time : twist.angular.z;
+    limited_twist.linear.x  = (std::abs(delta_lin_x) > _max_accel_linear * delta_time)  ? _last_twist.linear.x  + _max_accel_linear  * delta_time * dir_lin_x : twist.linear.x;
+    limited_twist.linear.y  = (std::abs(delta_lin_y) > _max_accel_linear * delta_time)  ? _last_twist.linear.y  + _max_accel_linear  * delta_time * dir_lin_y : twist.linear.y;
+    limited_twist.angular.z = (std::abs(delta_ang_z) > _max_accel_angular * delta_time) ? _last_twist.angular.z + _max_accel_angular * delta_time * dir_ang   : twist.angular.z;
 
 
     _last_twist = limited_twist;
