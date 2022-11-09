@@ -17,6 +17,7 @@ void WombatLocalPlanner::configure(const rclcpp_lifecycle::LifecycleNode::WeakPt
   auto node = _node.lock();
 
   _costmap_ros = costmap_ros;
+  _costmap     = std::make_shared<wombat::Costmap2Extend>(costmap_ros->getCostmap());
   _tf          = tf;
   _plugin_name = name;
   _logger      = rclcpp::get_logger("wombatLocalPlanner");//node->get_logger();
@@ -32,13 +33,14 @@ void WombatLocalPlanner::configure(const rclcpp_lifecycle::LifecycleNode::WeakPt
   RCLCPP_INFO(_logger, "-- Wombat Local Planner -> Configure... Params: --");
   RCLCPP_INFO(_logger, "--------------------------------------------------");
 
-  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".transform_tolerance", rclcpp::ParameterValue(2.0));
-  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".local_target_dist",   rclcpp::ParameterValue(0.2));
-  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".local_path_max_dist", rclcpp::ParameterValue(50.0));
-  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".end_approach_dist",   rclcpp::ParameterValue(1.0));
-  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".max_accel_lin",       rclcpp::ParameterValue(1.0));
-  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".max_accel_ang",       rclcpp::ParameterValue(1.0));
-  // nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".transform_tolerance", rclcpp::ParameterValue(0.1));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".transform_tolerance",  rclcpp::ParameterValue(2.0));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".local_target_dist",    rclcpp::ParameterValue(0.2));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".local_path_max_dist",  rclcpp::ParameterValue(50.0));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".end_approach_dist",    rclcpp::ParameterValue(1.0));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".max_accel_lin",        rclcpp::ParameterValue(1.0));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".max_accel_ang",        rclcpp::ParameterValue(1.0));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".footprint_em_stop_scale", rclcpp::ParameterValue(1.2));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".footprint_safety_scale", rclcpp::ParameterValue(1.5));
 
   node->get_parameter(_plugin_name + ".local_target_dist",    _local_target_dist);
   node->get_parameter(_plugin_name + ".local_path_max_dist",  _local_path_max_dist);
@@ -56,13 +58,32 @@ void WombatLocalPlanner::configure(const rclcpp_lifecycle::LifecycleNode::WeakPt
   node->get_parameter(_plugin_name + ".transform_tolerance", transform_tolerance);
   _tf_tolerance = rclcpp::Duration::from_seconds(transform_tolerance);
 
+  double footprint_em_stop_scale;
+  node->get_parameter(_plugin_name + ".footprint_em_stop_scale", footprint_em_stop_scale);
 
+  double footprint_safety_scale;
+  node->get_parameter(_plugin_name + ".footprint_safety_scale", footprint_safety_scale);
+
+
+  _params.robot_footprint = wombat::Polygon2d(costmap_ros->getRobotFootprint());
+  _params.robot_radius    = costmap_ros->getRobotRadius();
+  _params.robot_footprint_em_stop = _params.robot_footprint.scaled(footprint_em_stop_scale);
+  _params.robot_footprint_safety = _params.robot_footprint.scaled(footprint_safety_scale);
+
+
+  
   RCLCPP_INFO(_logger, "transform_tolerance: %f s", transform_tolerance);
   RCLCPP_INFO(_logger, "local_target_dist: %f m", _local_target_dist);
   RCLCPP_INFO(_logger, "local_path_max_dist: %f m", _local_path_max_dist);
   RCLCPP_INFO(_logger, "end_approach_dist: %f m", _end_approach_dist);
   RCLCPP_INFO(_logger, "max_accel_lin: %f m/s^2", max_accel_lin);
   RCLCPP_INFO(_logger, "max_accel_ang: %f rad/s^2", max_accel_ang);
+  RCLCPP_INFO(_logger, "robot_radius: %f m", _params.robot_radius);
+  RCLCPP_INFO_STREAM(_logger, "footprint: " << _params.robot_footprint);
+  RCLCPP_INFO_STREAM(_logger, "footprint_safety: " << _params.robot_footprint_safety);
+  RCLCPP_INFO_STREAM(_logger, "footprint_em_stop: " << _params.robot_footprint_em_stop);
+  RCLCPP_INFO(_logger, "footprint_save_scale: %f", footprint_safety_scale);
+
 
   //todo other controller via plugin!!  
   _controller = std::make_unique<wombat::MecanumController>();
@@ -86,6 +107,17 @@ void WombatLocalPlanner::cleanup()
 void WombatLocalPlanner::activate() 
 {
   RCLCPP_INFO(_logger, "Activating controller: %s",    _plugin_name.c_str());
+
+  //set header to footprints
+  std_msgs::msg::Header header;
+  header.frame_id = _costmap_ros->getBaseFrameID();
+  header.stamp = _clock->now();
+
+  _params.robot_footprint.header() = header;
+  _params.robot_footprint_safety.header() = header;
+  _params.robot_footprint_em_stop.header() = header;
+
+
   _pub->on_activate();
 }
 
@@ -114,10 +146,42 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
     RCLCPP_INFO(_logger, "Goal is Reached");
   }
 
+  //pub footprint
+  _pub->publish_footprint_em_stop(_params.robot_footprint_em_stop.toRosPolygon(_costmap_ros->getBaseFrameID(), pose.header.stamp));
+  _pub->publish_footprint_safety(_params.robot_footprint_safety.toRosPolygon(_costmap_ros->getBaseFrameID(), pose.header.stamp));
+
+
+  // check zones
+
+  //compute current robot zone by transforming the footprint into the global frame
+  _params.robot_footprint.header().stamp = pose.header.stamp;
+  _params.robot_footprint_safety.header().stamp = pose.header.stamp;
+  _params.robot_footprint_em_stop.header().stamp = pose.header.stamp;
+
+  std::cout << "zone default: " << _params.robot_footprint_safety << std::endl;
+
+  auto robot_zone_slow = wombat::TfUtility::transform(_tf, _params.robot_footprint_safety, _costmap_ros->getGlobalFrameID(), _tf_tolerance);
+  if(!robot_zone_slow)
+  {
+    RCLCPP_ERROR(_logger, "Could not transform robot footprint into global frame");
+    return wombat::Utility::getEmptyTwist(pose.header.stamp, _costmap_ros->getBaseFrameID());
+  }
+
+  auto robot_zone_em_stop = wombat::TfUtility::transform(_tf, _params.robot_footprint_em_stop, _costmap_ros->getGlobalFrameID(), _tf_tolerance);
+  if(!robot_zone_em_stop)
+  {
+    RCLCPP_ERROR(_logger, "Could not transform robot footprint into global frame");
+    return wombat::Utility::getEmptyTwist(pose.header.stamp, _costmap_ros->getBaseFrameID());
+  }
+
+
+  double zone_slow    = wombat::SafetyZoneChecker::check(robot_zone_slow.value(), _costmap);
+  double zone_em_stop = wombat::SafetyZoneChecker::check(robot_zone_em_stop.value(), _costmap);
+
   //if path is empty than send zero velocity
   if(_local_path->empty())
   {
-    return wombat::Utility::getEmptyTwist(pose.header.stamp, "todo");
+    return wombat::Utility::getEmptyTwist(pose.header.stamp, _costmap_ros->getBaseFrameID());
   }
   
   _local_path->update(robot_pose);
@@ -129,7 +193,7 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
   {
     RCLCPP_INFO(_logger, "tmp_local_path is empty");
 
-    return wombat::Utility::getEmptyTwist(pose.header.stamp, "todo");
+    return wombat::Utility::getEmptyTwist(pose.header.stamp, _costmap_ros->getBaseFrameID());
   }
 
   // std::cout << "--" << std::endl;
@@ -172,13 +236,27 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
   // RCLCPP_INFO(_logger, "end_approach_scale(0.0..1.0): %f", end_approach_scale);
   // std::cout << "end_approach_scale: " << end_approach_scale << std::endl;
 
+  if(zone_em_stop > 1.0)
+  {
+    RCLCPP_INFO(_logger, "zone_em_stop > 1.0");
+    return wombat::Utility::getEmptyTwist(pose.header.stamp, _costmap_ros->getBaseFrameID());
+  }
+
   auto tmp_twist = _controller->control(robot_pose, _local_path, end_approach_scale);
-  msg.twist = _limit_accel->limitAccel(tmp_twist);
+
+  //todo apply zone slow
+  double vel_fac = 1.0;
+  if(zone_slow > 1.0)
+  {
+    vel_fac = 0.5;
+  }
+
+  msg.twist = _limit_accel->limitAccel(tmp_twist, vel_fac);
 
 
 
   msg.header.stamp = pose.header.stamp;
-  msg.header.frame_id = "todo";
+  msg.header.frame_id = _costmap_ros->getBaseFrameID();
 
 
   return msg;
@@ -196,9 +274,7 @@ void WombatLocalPlanner::setPlan(const nav_msgs::msg::Path& path)
     RCLCPP_ERROR(_logger, "transformed_global_path is empty.... maybe unable to be transformed");
   }
 
-  auto* costmap = _costmap_ros->getCostmap();
-
-  double dist_threshold = std::max(costmap->getSizeInCellsX(), costmap->getSizeInCellsY()) * costmap->getResolution() / 2.0;
+  double dist_threshold = std::max(_costmap->costmap().getSizeInCellsX(), _costmap->costmap().getSizeInCellsY()) * _costmap->costmap().getResolution() / 2.0;
   
 
   auto path2 = wombat::Path2(transformed_global_path);

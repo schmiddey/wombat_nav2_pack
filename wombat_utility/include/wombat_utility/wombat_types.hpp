@@ -5,18 +5,26 @@
 #include <algorithm>
 #include <ostream>
 
-#include "rclcpp/rclcpp.hpp"
-#include "std_msgs/msg/header.hpp"
-#include "geometry_msgs/msg/pose_stamped.hpp"
-#include "nav_msgs/msg/path.hpp"
-#include "nav2_costmap_2d/costmap_2d.hpp"
-#include "tf2/utils.h"
-#include "tf2/transform_datatypes.h"
-#include "Eigen/Dense"
-#include "Eigen/Geometry"
+#include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/header.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <nav_msgs/msg/path.hpp>
+#include <nav2_costmap_2d/costmap_2d.hpp>
+#include <tf2/utils.h>
+#include <tf2/transform_datatypes.h>
+#include <Eigen/Dense>
+#include <Eigen/Geometry>
 
 namespace wombat
 {
+
+using Point2 = Eigen::Vector2d;
+
+
+//forwards
+class Pixel2;
+
+
 class Convert{
 public:
   
@@ -45,7 +53,12 @@ static inline Eigen::Vector2d toVector2d(const geometry_msgs::msg::Point& point)
 //   return ang;
 // }
 
-static inline geometry_msgs::msg::Point toRosPoint(const Eigen::Vector2d& vec)
+static inline Point2 fromRosPoint(const geometry_msgs::msg::Point& point)
+{
+  return Point2(point.x, point.y);
+}
+
+static inline geometry_msgs::msg::Point toRosPoint(const Point2& vec)
 {
   geometry_msgs::msg::Point point;
   point.x = vec.x();
@@ -67,8 +80,20 @@ static inline Eigen::Rotation2Dd toRotation2d(const geometry_msgs::msg::Quaterni
   return Eigen::Rotation2Dd(yaw);
 }
 
-};
+// static inline nav2_costmap_2d::MapLocation toMaplocation(const Pixel2 pixel)
+// {
+//   nav2_costmap_2d::MapLocation map_location;
+//   map_location.x = pixel.x();
+//   map_location.y = pixel.y();
+//   return map_location;
+// }
 
+// static inline Pixel2 toPixel2(const nav2_costmap_2d::MapLocation map_location)
+// {
+//   return Pixel2(map_location.x, map_location.y);
+
+
+};
 
 // types
 struct Pose2{
@@ -102,18 +127,20 @@ struct Pose2{
 };
 
 
-using Point2 = Eigen::Vector2d;
+
 
 class Pixel2{
 public:
+  using value_type = int;
+
   Pixel2() = default;
-  Pixel2(const int x, const int y):
+  Pixel2(const value_type x, const value_type y):
     _x(x),
     _y(y)
   { }
   Pixel2(const nav2_costmap_2d::MapLocation& map_loc):
-    _x(static_cast<int>(map_loc.x)),
-    _y(static_cast<int>(map_loc.y))
+    _x(static_cast<value_type>(map_loc.x)),
+    _y(static_cast<value_type>(map_loc.y))
   { } 
   ~Pixel2() = default;
 
@@ -125,11 +152,11 @@ public:
 
 
 
-  int x() const {return _x;}
-  int y() const {return _y;}
+  value_type x() const {return _x;}
+  value_type y() const {return _y;}
   
-  int& x() {return _x;}
-  int& y() {return _y;}
+  value_type& x() {return _x;}
+  value_type& y() {return _y;}
 
   Pixel2 operator+(const Pixel2& rhs)
   {
@@ -145,7 +172,7 @@ public:
   {
     return Pixel2(std::round(_x * rhs), std::round(_y * rhs));
   }
-
+  
   Pixel2& operator+=(const Pixel2& rhs)
   {
     _x += rhs.x();
@@ -186,10 +213,58 @@ public:
     return map_loc;
   }
 
+
+public: // static
+  static inline std::vector<Pixel2> fromMapLocationList(const std::vector<nav2_costmap_2d::MapLocation>& ml_list)
+  {
+    std::vector<Pixel2> p_list;
+    p_list.reserve(ml_list.size());
+    for(const auto& ml : ml_list)
+    {
+      p_list.emplace_back(ml);
+    }
+    return p_list;
+  }
+
+  static inline std::vector<nav2_costmap_2d::MapLocation> toMapLocationList(const std::vector<Pixel2>& p_list)
+  {
+    std::vector<nav2_costmap_2d::MapLocation> ml_list;
+    ml_list.reserve(p_list.size());
+    for(const auto& p : p_list)
+    {
+      ml_list.emplace_back(p.toMapLocation());
+    }
+    return ml_list;
+  }
+
 private:
-  int _x;
-  int _y;
+  value_type _x;
+  value_type _y;
 };
+
+template<class P>
+class Rect2{
+public:
+  Rect2() = default;
+  Rect2(const P& p, typename P::value_type width, typename P::value_type height):
+    _p(p),
+    _width(width),
+    _height(height)
+  { }
+
+
+
+  P p() const {return _p;}
+  typename P::value_type width() const {return _width;}
+  typename P::value_type height() const {return _height;}
+
+private:
+  P _p;
+  typename P::value_type _width;
+  typename P::value_type _height;
+};
+
+
 
 
 

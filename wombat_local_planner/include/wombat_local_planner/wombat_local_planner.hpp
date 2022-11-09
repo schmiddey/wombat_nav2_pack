@@ -12,6 +12,8 @@
 #include <nav2_core/exceptions.hpp>
 #include <nav2_util/node_utils.hpp>
 
+#include <nav2_costmap_2d/footprint.hpp>
+
 #include <pluginlib/class_loader.hpp>
 #include <pluginlib/class_list_macros.hpp>
 
@@ -21,8 +23,13 @@
 #include <wombat_utility/utility.hpp>
 #include <wombat_utility/wombatPath2.hpp>
 #include <wombat_utility/wombatLocalPath2.hpp>
+#include <wombat_utility/wombatPolygon.hpp>
 
 #include <wombat_utility/wombatCostmap2Extend.hpp>
+
+
+#include <wombat_local_planner/SafetyZoneChecker.hpp>
+
 
 #include "base_controller.hpp"
 #include "mecanum_controller.hpp"
@@ -70,11 +77,24 @@ public:
 protected:
 
 
-protected: 
+protected:
+  struct WombatParameter{
+    rclcpp::Duration   tf_tolerance{0, 0};
+    double             local_target_dist   = 0.2;  //dist a path element is defined as reached
+    double             local_path_max_dist = 50.0;
+    double             end_approach_dist   = 1.0;
+    double             robot_radius        = 0.3;
+    wombat::Polygon2d  robot_footprint;
+    wombat::Polygon2d  robot_footprint_em_stop;
+    wombat::Polygon2d  robot_footprint_safety;
+  };
+
+
   rclcpp_lifecycle::LifecycleNode::WeakPtr       _node;
   std::shared_ptr<tf2_ros::Buffer>               _tf;
   std::string                                    _plugin_name;
   std::shared_ptr<nav2_costmap_2d::Costmap2DROS> _costmap_ros;
+  wombat::Costmap2Extend::SharedPtr              _costmap;
   
   rclcpp::Logger _logger {rclcpp::get_logger("WombatLocalPlanner")};
 
@@ -83,6 +103,7 @@ protected:
 
   std::unique_ptr<wombat::BaseController> _controller;
 
+  WombatParameter _params;
   //-- Params --
   rclcpp::Duration _tf_tolerance{0, 0};
   double           _local_target_dist   = 0.2;  //dist a path element is defined as reached

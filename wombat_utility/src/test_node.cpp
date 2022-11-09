@@ -9,6 +9,8 @@
 #include "wombat_utility/wombat_types.hpp"
 #include "wombat_utility/wombatLocalPath2.hpp"
 
+#include <wombat_utility/wombatPolygon.hpp>
+
 using namespace std::chrono_literals;
 
 
@@ -29,30 +31,31 @@ public:
 private:
   void sub_path_callback(const nav_msgs::msg::Path::SharedPtr msg)
   {
-    RCLCPP_INFO(this->get_logger(), "sub_path_callback");
+    (void)msg; //unused
+    // RCLCPP_INFO(this->get_logger(), "sub_path_callback");
     
-    if(msg->poses.empty())
-    {
-      RCLCPP_INFO(this->get_logger(), "sub_path_callback: empty path");
-      return;
-    }
+    // if(msg->poses.empty())
+    // {
+    //   RCLCPP_INFO(this->get_logger(), "sub_path_callback: empty path");
+    //   return;
+    // }
 
-    auto robot_pose = wombat::Pose2(msg->poses.front().pose);
+    // auto robot_pose = wombat::Pose2(msg->poses.front().pose);
 
-    auto path2 = wombat::Path2(*msg);
+    // auto path2 = wombat::Path2(*msg);
     
-    _local_path = std::make_unique<wombat::LocalPath2>(path2, 0.2, 1.0);
+    // _local_path = std::make_unique<wombat::LocalPath2>(path2, 0.2, 1.0);
 
-    _local_path->update(robot_pose);
+    // _local_path->update(robot_pose);
 
-    auto tmp_local_path = _local_path->extractLocalPath();
+    // auto tmp_local_path = _local_path->extractLocalPath();
   
-    std::cout << "tmp_local_path size: " << tmp_local_path.size() << std::endl;
+    // std::cout << "tmp_local_path size: " << tmp_local_path.size() << std::endl;
 
-    //pub path
-    _pub_path->publish(tmp_local_path.toRosPath());
+    // //pub path
+    // _pub_path->publish(tmp_local_path.toRosPath());
 
-    RCLCPP_INFO(this->get_logger(), "local_path_length_from_begin: %f", _local_path->localPathLength_from_begin());
+    // RCLCPP_INFO(this->get_logger(), "local_path_length_from_begin: %f", _local_path->localPathLength_from_begin());
   }
 
 
@@ -61,7 +64,7 @@ private:
 
   rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr _sub_path;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr _pub_path;
-
+  wombat::Polygon2d _polygon;
 };
 
 

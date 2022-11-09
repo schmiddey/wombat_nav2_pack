@@ -18,6 +18,10 @@
 #include <Eigen/Geometry>
 
 #include <wombat_utility/wombat_types.hpp>
+#include <wombat_utility/wombatPolygon.hpp>
+
+#include <nav2_costmap_2d/footprint.hpp>
+
 
 namespace wombat{
 
@@ -27,6 +31,7 @@ namespace wombat{
 class Utility{
 public:
 
+// static inline std
 
 
 static inline geometry_msgs::msg::TwistStamped getEmptyTwist(const rclcpp::Time& stamp, const std::string& frame_id)
@@ -121,6 +126,41 @@ static inline bool isEqual(const double lhs, const double rhs, const double epsi
 static inline bool isEqual(const Pose2& lhs, const Pose2& rhs, const double epsilon = 0.00001)
 {
   return isEqual(lhs.position.x(), rhs.position.x(), epsilon) && isEqual(lhs.position.y(), rhs.position.y(), epsilon);
+}
+
+
+
+static inline Polygon2d createFootprint(const std::string& footprint)
+{
+  Polygon2d polygon;
+  std::vector<geometry_msgs::msg::Point> ros_points;
+  auto ret = nav2_costmap_2d::makeFootprintFromString(footprint, ros_points);
+  if(!ret)
+  {
+    RCLCPP_ERROR(rclcpp::get_logger("wombat_utility"), "Failed to parse footprint string");
+    return polygon;
+  }
+
+  // std::cout << "points: " << std::endl;
+  // for(auto& e : ros_points)
+  // {
+  //   std::cout << "p: " << e.x << ", " << e.y << std::endl;
+  // }
+  polygon.fromRosPoints(ros_points);
+
+  return polygon;
+}
+
+
+static inline Polygon2d circleToPolygon(const double radius, const unsigned int num_points)
+{
+  Polygon2d polygon;
+  for(unsigned int i = 0; i < num_points; i++)
+  {
+    double angle = 2.0 * M_PI * i / num_points;
+    polygon.push_back( Point2(radius * std::cos(angle), radius * std::sin(angle)) );
+  }
+  return polygon;
 }
 
 

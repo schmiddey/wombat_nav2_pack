@@ -26,16 +26,21 @@ public:
   }
   ~LimitAccel() = default;
 
-  geometry_msgs::msg::Twist limitAccel(const geometry_msgs::msg::Twist& twist)
+  geometry_msgs::msg::Twist limitAccel(const geometry_msgs::msg::Twist& twist, const double factor = 1.0)
   {
     geometry_msgs::msg::Twist limited_twist;
 
-    auto delta_lin_x = twist.linear.x - _last_twist.linear.x;
-    auto delta_lin_y = twist.linear.y - _last_twist.linear.y;
+    geometry_msgs::msg::Twist twist_input = twist;
+    twist_input.linear.x *= factor;
+    twist_input.linear.y *= factor;
+    twist_input.angular.z *= factor;
+
+    auto delta_lin_x = twist_input.linear.x - _last_twist.linear.x;
+    auto delta_lin_y = twist_input.linear.y - _last_twist.linear.y;
     // auto delta_lin_z = twist.linear.z - _last_twist.linear.z;
     // auto delta_ang_x = twist.angular.x - _last_twist.angular.x;
     // auto delta_ang_y = twist.angular.y - _last_twist.angular.y;
-    auto delta_ang_z = twist.angular.z - _last_twist.angular.z;
+    auto delta_ang_z = twist_input.angular.z - _last_twist.angular.z;
 
     auto delta_time = (_clock->now() - _time_last_twist).seconds();
 
@@ -52,6 +57,7 @@ public:
     _last_twist = limited_twist;
     _time_last_twist = _clock->now();
 
+    
     return limited_twist;
   }
   

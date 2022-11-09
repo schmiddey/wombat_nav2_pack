@@ -21,7 +21,7 @@ namespace wombat{
  */
 class CollisionChecker{
 public:
-  CollisionChecker(wombat::Costmap2Extend& costmap, std::shared_ptr<wombat::LocalPath2>& local_path) : 
+  CollisionChecker(wombat::Costmap2Extend::SharedPtr& costmap, std::shared_ptr<wombat::LocalPath2>& local_path) : 
     _costmap(costmap),
     _local_path(local_path)
   {
@@ -38,7 +38,12 @@ public:
    */
   double checkCollision()
   {
-    // _costmap.getCost(0,0);
+    //transform robot polygon to global frame
+
+    //get bounding rect from robot
+
+    //check if stuff is in polygon
+
 
     return 0.0;
   }
@@ -86,9 +91,10 @@ private:
   // }
 
 private:
-  wombat::Costmap2Extend& _costmap;
+  wombat::Costmap2Extend::SharedPtr   _costmap;
   std::shared_ptr<wombat::LocalPath2> _local_path; //todo maybe use path2d obj no local path
 
+  
 
   // std::size_t _max_cell_distance = 2;   //if 0 then no check + interpolation
   

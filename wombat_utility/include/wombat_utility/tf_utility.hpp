@@ -10,6 +10,8 @@
 #include<tf2_ros/buffer.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
+#include <wombat_utility/wombatPolygon.hpp>
+
 namespace wombat
 {
 
@@ -81,8 +83,9 @@ public:
  * @param tf_tolerance 
  * @return std::optional<geometry_msgs::msg::PoseStamped> 
  */
-static std::optional<geometry_msgs::msg::PoseStamped> transform(const std::shared_ptr<tf2_ros::Buffer> tf,
-                                                                const geometry_msgs::msg::PoseStamped& pose, 
+template<class T>
+static std::optional<T> transform(const std::shared_ptr<tf2_ros::Buffer> tf,
+                                                                const T& pose, 
                                                                 const std::string& frame,
                                                                 const rclcpp::Duration& tf_tolerance)
 {
@@ -118,7 +121,7 @@ static std::optional<geometry_msgs::msg::PoseStamped> transform(const std::share
     }
     else
     {
-      geometry_msgs::msg::PoseStamped out_pose;
+      T out_pose;
       tf2::doTransform(pose, out_pose, transform_backup);
       return out_pose;
     }
@@ -173,6 +176,40 @@ static std::optional<nav_msgs::msg::Path> transform(const std::shared_ptr<tf2_ro
   }
 
   return ret_path;
+}
+
+static std::optional<wombat::Polygon2d> transform(const std::shared_ptr<tf2_ros::Buffer> tf, 
+                                                  const wombat::Polygon2d& polygon, 
+                                                  const std::string frame, 
+                                                  const rclcpp::Duration& tf_tolerance)
+{
+  wombat::Polygon2d ret_polygon;
+  auto points = polygon.toRosPoints();
+  std::vector<geometry_msgs::msg::Point> ret_points;
+  ret_points.reserve(points.size());
+
+
+  for(auto& e : points)
+  { 
+    geometry_msgs::msg::PointStamped tmp_point;
+    tmp_point.header = polygon.header();
+    tmp_point.point = e;
+    auto t_point = TfUtility::transform(tf, tmp_point, frame, tf_tolerance);
+    
+    if(!t_point)
+    {
+      //error
+      return std::nullopt;
+    }
+
+    ret_polygon.header() = t_point.value().header;
+
+    ret_points.emplace_back(t_point.value().point);
+  }
+
+  ret_polygon.fromRosPoints(ret_points);
+
+  return ret_polygon;
 }
 
 
