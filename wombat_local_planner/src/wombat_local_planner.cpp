@@ -33,16 +33,16 @@ void WombatLocalPlanner::configure(const rclcpp_lifecycle::LifecycleNode::WeakPt
   RCLCPP_INFO(_logger, "-- Wombat Local Planner -> Configure... Params: --");
   RCLCPP_INFO(_logger, "--------------------------------------------------");
 
-  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".transform_tolerance",  rclcpp::ParameterValue(2.0));
-  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".local_target_dist",    rclcpp::ParameterValue(0.2));
-  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".local_path_max_dist",  rclcpp::ParameterValue(50.0));
-  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".end_approach_dist",    rclcpp::ParameterValue(1.0));
-  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".max_accel_lin",        rclcpp::ParameterValue(1.0));
-  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".max_accel_ang",        rclcpp::ParameterValue(1.0));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".transform_tolerance",     rclcpp::ParameterValue(2.0));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".local_target_dist",       rclcpp::ParameterValue(0.2));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".local_path_max_dist",     rclcpp::ParameterValue(50.0));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".end_approach_dist",       rclcpp::ParameterValue(1.0));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".max_accel_lin",           rclcpp::ParameterValue(1.0));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".max_accel_ang",           rclcpp::ParameterValue(1.0));
   nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".footprint_em_stop_scale", rclcpp::ParameterValue(1.2));
-  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".footprint_safety_scale", rclcpp::ParameterValue(1.5));
-  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".em_stop_zone_cell_cnt", rclcpp::ParameterValue(1));
-  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".safety_zone_cell_cnt",  rclcpp::ParameterValue(1));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".footprint_safety_scale",  rclcpp::ParameterValue(1.5));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".em_stop_zone_cell_cnt",   rclcpp::ParameterValue(1));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".safety_zone_cell_cnt",    rclcpp::ParameterValue(1));
   nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".safety_zone_speed_scale", rclcpp::ParameterValue(0.5));
 
 
