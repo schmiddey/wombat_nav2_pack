@@ -46,6 +46,7 @@ namespace wombat_local_planner{
  *                             more!!!?
  *                             path_decorator/Orientation planner (Mecanum only) -> planning orientation of path
  * 
+ + @todo add histerysis to collision checker
  */
 class WombatLocalPlanner: public nav2_core::Controller {
 public:
@@ -87,6 +88,9 @@ protected:
     wombat::Polygon2d  robot_footprint;
     wombat::Polygon2d  robot_footprint_em_stop;
     wombat::Polygon2d  robot_footprint_safety;
+    int                em_stop_zone_cell_cnt = 1;
+    int                safety_zone_cell_cnt  = 1;
+    double             safety_zone_speed_scale = 0.5;
   };
 
 

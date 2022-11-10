@@ -41,6 +41,10 @@ void WombatLocalPlanner::configure(const rclcpp_lifecycle::LifecycleNode::WeakPt
   nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".max_accel_ang",        rclcpp::ParameterValue(1.0));
   nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".footprint_em_stop_scale", rclcpp::ParameterValue(1.2));
   nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".footprint_safety_scale", rclcpp::ParameterValue(1.5));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".em_stop_zone_cell_cnt", rclcpp::ParameterValue(1));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".safety_zone_cell_cnt",  rclcpp::ParameterValue(1));
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".safety_zone_speed_scale", rclcpp::ParameterValue(0.5));
+
 
   node->get_parameter(_plugin_name + ".local_target_dist",    _local_target_dist);
   node->get_parameter(_plugin_name + ".local_path_max_dist",  _local_path_max_dist);
@@ -68,7 +72,13 @@ void WombatLocalPlanner::configure(const rclcpp_lifecycle::LifecycleNode::WeakPt
   _params.robot_footprint = wombat::Polygon2d(costmap_ros->getRobotFootprint());
   _params.robot_radius    = costmap_ros->getRobotRadius();
   _params.robot_footprint_em_stop = _params.robot_footprint.scaled(footprint_em_stop_scale);
-  _params.robot_footprint_safety = _params.robot_footprint.scaled(footprint_safety_scale);
+  _params.robot_footprint_safety = _params.robot_footprint.scaled(footprint_safety_scale);  
+
+  node->get_parameter(_plugin_name + ".em_stop_zone_cell_cnt", _params.em_stop_zone_cell_cnt);
+  node->get_parameter(_plugin_name + ".safety_zone_cell_cnt",  _params.safety_zone_cell_cnt);
+  _params.em_stop_zone_cell_cnt = std::abs(_params.em_stop_zone_cell_cnt);
+  _params.safety_zone_cell_cnt  = std::abs(_params.safety_zone_cell_cnt);
+  node->get_parameter(_plugin_name + ".safety_zone_speed_scale", _params.safety_zone_speed_scale);
 
 
   
@@ -80,9 +90,12 @@ void WombatLocalPlanner::configure(const rclcpp_lifecycle::LifecycleNode::WeakPt
   RCLCPP_INFO(_logger, "max_accel_ang: %f rad/s^2", max_accel_ang);
   RCLCPP_INFO(_logger, "robot_radius: %f m", _params.robot_radius);
   RCLCPP_INFO_STREAM(_logger, "footprint: " << _params.robot_footprint);
+  RCLCPP_INFO(_logger, "footprint_safety_scale: %f", footprint_safety_scale);
+  RCLCPP_INFO(_logger, "em_stop_zone_cell_cnt: %d",_params.em_stop_zone_cell_cnt);
+  RCLCPP_INFO(_logger, "safety_zone_cell_cnt:  %d",_params.safety_zone_cell_cnt);
+  RCLCPP_INFO(_logger, "safety_zone_speed_scale: %f", _params.safety_zone_speed_scale);
   RCLCPP_INFO_STREAM(_logger, "footprint_safety: " << _params.robot_footprint_safety);
   RCLCPP_INFO_STREAM(_logger, "footprint_em_stop: " << _params.robot_footprint_em_stop);
-  RCLCPP_INFO(_logger, "footprint_save_scale: %f", footprint_safety_scale);
 
 
   //todo other controller via plugin!!  
@@ -235,8 +248,8 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
   
   // RCLCPP_INFO(_logger, "end_approach_scale(0.0..1.0): %f", end_approach_scale);
   // std::cout << "end_approach_scale: " << end_approach_scale << std::endl;
-
-  if(zone_em_stop > 1.0)
+  //apply emstop if needed
+  if(zone_em_stop > static_cast<double>(_params.em_stop_zone_cell_cnt))
   {
     RCLCPP_INFO(_logger, "zone_em_stop > 1.0");
     return wombat::Utility::getEmptyTwist(pose.header.stamp, _costmap_ros->getBaseFrameID());
@@ -244,11 +257,11 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
 
   auto tmp_twist = _controller->control(robot_pose, _local_path, end_approach_scale);
 
-  //todo apply zone slow
+  //apply zone slow down
   double vel_fac = 1.0;
-  if(zone_slow > 1.0)
+  if(zone_slow > static_cast<double>(_params.safety_zone_cell_cnt))
   {
-    vel_fac = 0.5;
+    vel_fac = _params.safety_zone_speed_scale;
   }
 
   msg.twist = _limit_accel->limitAccel(tmp_twist, vel_fac);
