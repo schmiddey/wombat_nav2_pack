@@ -28,11 +28,12 @@
 #include <wombat_utility/wombatCostmap2Extend.hpp>
 
 
-#include <wombat_local_planner/SafetyZoneChecker.hpp>
+#include "SafetyZoneChecker.hpp"
 
 
 #include "base_controller.hpp"
 #include "mecanum_controller.hpp"
+#include "differential_controller.hpp"
 #include "limit_accel.hpp"
 // #include "collision_checker.hpp"
 
@@ -53,11 +54,16 @@ public:
   WombatLocalPlanner() = default;
   ~WombatLocalPlanner() override = default;
 
-  void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent,
-                 std::string name, 
-                 const std::shared_ptr<tf2_ros::Buffer>& tf,
-                 const std::shared_ptr<nav2_costmap_2d::Costmap2DROS>& costmap_ros  
-                ) override;
+  // void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent,
+  //                std::string name, 
+  //                const std::shared_ptr<tf2_ros::Buffer>& tf,
+  //                const std::shared_ptr<nav2_costmap_2d::Costmap2DROS>& costmap_ros  
+  //               );
+
+  void configure(
+    const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
+    std::string name, std::shared_ptr<tf2_ros::Buffer> tf,
+    std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros) override;
 
   void cleanup() override;
   void activate() override;
@@ -66,9 +72,13 @@ public:
   // geometry_msgs::msg::TwistStamped computeVelocityCommands(const geometry_msgs::msg::PoseStamped & pose,
   //                                                          const geometry_msgs::msg::Twist & velocity) override;
   
-  geometry_msgs::msg::TwistStamped computeVelocityCommands(const geometry_msgs::msg::PoseStamped& pose,
-                                                           const geometry_msgs::msg::Twist& velocity, 
-                                                           nav2_core::GoalChecker* goal_checker) override;
+  // geometry_msgs::msg::TwistStamped computeVelocityCommands(const geometry_msgs::msg::PoseStamped& pose,
+  //                                                          const geometry_msgs::msg::Twist& velocity//, 
+  //                                                          /*nav2_core::GoalChecker* goal_checker*/) ;
+  geometry_msgs::msg::TwistStamped computeVelocityCommands(
+    const geometry_msgs::msg::PoseStamped & pose,
+    const geometry_msgs::msg::Twist & velocity,
+    nav2_core::GoalChecker * /*goal_checker*/) override;
 
   void setPlan(const nav_msgs::msg::Path& path) override;
 
@@ -80,6 +90,7 @@ protected:
 
 protected:
   struct WombatParameter{
+    std::string        kinematic = "diff";
     rclcpp::Duration   tf_tolerance{0, 0};
     double             local_target_dist   = 0.2;  //dist a path element is defined as reached
     double             local_path_max_dist = 50.0;

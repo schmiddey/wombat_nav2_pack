@@ -6,11 +6,10 @@
 namespace wombat_local_planner
 {
 
-void WombatLocalPlanner::configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent,
-                                   std::string name, 
-                                   const std::shared_ptr<tf2_ros::Buffer>& tf,
-                                   const std::shared_ptr<nav2_costmap_2d::Costmap2DROS>& costmap_ros  
-                                   )
+void WombatLocalPlanner::configure(
+    const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
+    std::string name, std::shared_ptr<tf2_ros::Buffer> tf,
+    std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros)
 {
   _node = parent;
 
@@ -33,6 +32,9 @@ void WombatLocalPlanner::configure(const rclcpp_lifecycle::LifecycleNode::WeakPt
   RCLCPP_INFO(_logger, "-- Wombat Local Planner -> Configure... Params: --");
   RCLCPP_INFO(_logger, "--------------------------------------------------");
 
+
+  // -- Params --
+  nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".kinematic",            rclcpp::ParameterValue("diff"));
   nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".transform_tolerance",     rclcpp::ParameterValue(2.0));
   nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".local_target_dist",       rclcpp::ParameterValue(0.2));
   nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".local_path_max_dist",     rclcpp::ParameterValue(50.0));
@@ -45,6 +47,9 @@ void WombatLocalPlanner::configure(const rclcpp_lifecycle::LifecycleNode::WeakPt
   nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".safety_zone_cell_cnt",    rclcpp::ParameterValue(1));
   nav2_util::declare_parameter_if_not_declared(node, _plugin_name + ".safety_zone_speed_scale", rclcpp::ParameterValue(0.5));
 
+
+
+  node->get_parameter(_plugin_name + ".kinematic", _params.kinematic);
 
   node->get_parameter(_plugin_name + ".local_target_dist",    _local_target_dist);
   node->get_parameter(_plugin_name + ".local_path_max_dist",  _local_path_max_dist);
@@ -81,7 +86,8 @@ void WombatLocalPlanner::configure(const rclcpp_lifecycle::LifecycleNode::WeakPt
   node->get_parameter(_plugin_name + ".safety_zone_speed_scale", _params.safety_zone_speed_scale);
 
 
-  
+
+  RCLCPP_INFO_STREAM(_logger, "kinematic: "  << _params.kinematic);
   RCLCPP_INFO(_logger, "transform_tolerance: %f s", transform_tolerance);
   RCLCPP_INFO(_logger, "local_target_dist: %f m", _local_target_dist);
   RCLCPP_INFO(_logger, "local_path_max_dist: %f m", _local_path_max_dist);
@@ -99,7 +105,20 @@ void WombatLocalPlanner::configure(const rclcpp_lifecycle::LifecycleNode::WeakPt
 
 
   //todo other controller via plugin!!  
-  _controller = std::make_unique<wombat::MecanumController>();
+  if(_params.kinematic == "mecanum")
+  {
+    _controller = std::make_unique<wombat::MecanumController>();
+  }
+  else if(_params.kinematic == "diff")
+  {
+    _controller = std::make_unique<wombat::DifferentialController>();
+  }
+  else
+  {
+    RCLCPP_ERROR(_logger, "Unknown kinematic: %s... use diff as default", _params.kinematic.c_str());
+    _controller = std::make_unique<wombat::DifferentialController>();
+  }
+
   _controller->initialize(parent, name);
 
   //limit accel
@@ -140,24 +159,43 @@ void WombatLocalPlanner::deactivate()
   _pub->on_deactivate();
 }
 
-geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(const geometry_msgs::msg::PoseStamped& pose,
-                                                                             const geometry_msgs::msg::Twist& velocity, 
-                                                                             nav2_core::GoalChecker* goal_checker) 
+geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(
+    const geometry_msgs::msg::PoseStamped& pose,
+    const geometry_msgs::msg::Twist& velocity,
+    nav2_core::GoalChecker* goal_checker)
+
 {
   // RCLCPP_INFO(_logger, "compute vel cmd");
-
+  // (void)velocity;
   geometry_msgs::msg::TwistStamped msg;
 
   // RCLCPP_INFO(_logger, "pose_in frame: %s", pose.header.frame_id.c_str());
   auto robot_pose = wombat::Pose2(pose.pose);
 
   
-  //todo Error ... poses to compare are not in the same frame :(  fix this
+  // //todo Error ... poses to compare are not in the same frame :(  fix this
   auto goal_is_reached = goal_checker->isGoalReached(pose.pose, _global_path_unmodified.poses.back().pose, velocity);
   if(goal_is_reached)
   {
     RCLCPP_INFO(_logger, "Goal is Reached");
   }
+  
+  geometry_msgs::msg::Pose p_tol;
+  geometry_msgs::msg::Twist v_tol;
+  auto ret_tol = goal_checker->getTolerances(p_tol, v_tol);
+  (void)ret_tol; //hack for now
+
+  // //print p_tol and v_tol
+  // if(ret_tol)
+  // {
+  //   RCLCPP_INFO(_logger, "p_tol_p: %f, %f, %f", p_tol.position.x, p_tol.position.y, p_tol.orientation.z);
+  //   RCLCPP_INFO(_logger, "p_tol_o: %f, %f, %f, %f", p_tol.orientation.x, p_tol.orientation.y, p_tol.orientation.z, p_tol.orientation.w);
+  //   RCLCPP_INFO(_logger, "v_tol: %f, %f, %f", v_tol.linear.x, v_tol.linear.y, v_tol.angular.z);
+  // }
+  // else
+  // {
+  //   RCLCPP_INFO(_logger, "No Tolerances");
+  // }
 
   //pub footprint
   _pub->publish_footprint_em_stop(_params.robot_footprint_em_stop.toRosPolygon(_costmap_ros->getBaseFrameID(), pose.header.stamp));
@@ -165,13 +203,12 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
 
 
   // check zones
-
   //compute current robot zone by transforming the footprint into the global frame
   _params.robot_footprint.header().stamp = pose.header.stamp;
   _params.robot_footprint_safety.header().stamp = pose.header.stamp;
   _params.robot_footprint_em_stop.header().stamp = pose.header.stamp;
 
-  std::cout << "zone default: " << _params.robot_footprint_safety << std::endl;
+  // std::cout << "zone default: " << _params.robot_footprint_safety << std::endl;
 
   auto robot_zone_slow = wombat::TfUtility::transform(_tf, _params.robot_footprint_safety, _costmap_ros->getGlobalFrameID(), _tf_tolerance);
   if(!robot_zone_slow)
@@ -255,7 +292,9 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
     return wombat::Utility::getEmptyTwist(pose.header.stamp, _costmap_ros->getBaseFrameID());
   }
 
-  auto tmp_twist = _controller->control(robot_pose, _local_path, end_approach_scale);
+  auto tolerance = wombat::Pose2(p_tol);
+
+  auto tmp_twist = _controller->control(robot_pose, _local_path, end_approach_scale, tolerance);
 
   //apply zone slow down
   double vel_fac = 1.0;
@@ -278,13 +317,19 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
 void WombatLocalPlanner::setPlan(const nav_msgs::msg::Path& path) 
 {
   _pub->publish_global_plan(path);
-  _global_path_unmodified = path;
+  _global_path_unmodified = wombat::Utility::checkPath(path);
+
+
 
   //transform global path into robot_frame
-  auto transformed_global_path = wombat::TfUtility::transform(_tf, path, _costmap_ros->getGlobalFrameID(), _tf_tolerance).value_or(nav_msgs::msg::Path());
+  auto transformed_global_path = 
+    wombat::TfUtility::transform(_tf, 
+                               _global_path_unmodified,
+                              _costmap_ros->getGlobalFrameID(),
+                       _tf_tolerance).value_or(nav_msgs::msg::Path());
   if(transformed_global_path.poses.empty())
   {
-    RCLCPP_ERROR(_logger, "transformed_global_path is empty.... maybe unable to be transformed");
+    RCLCPP_ERROR(_logger, "transformed_global_path is empty, while given path has %d elements.... maybe unable to be transformed", (int)path.poses.size());
   }
 
   double dist_threshold = std::max(_costmap->costmap().getSizeInCellsX(), _costmap->costmap().getSizeInCellsY()) * _costmap->costmap().getResolution() / 2.0;
@@ -315,7 +360,7 @@ void WombatLocalPlanner::setSpeedLimit(const double & speed_limit, const bool & 
 } // namespace wombat_local_planner
 
 // Register this controller as a nav2_core plugin
-#include "pluginlib/class_list_macros.hpp"
+// #include "pluginlib/class_list_macros.hpp"
 PLUGINLIB_EXPORT_CLASS(wombat_local_planner::WombatLocalPlanner, nav2_core::Controller)
 
 

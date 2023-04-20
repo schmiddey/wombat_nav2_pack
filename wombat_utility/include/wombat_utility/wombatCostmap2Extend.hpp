@@ -86,9 +86,9 @@ public:
 
     //use costmap2d polygon stuff
     // _costmap->con
-    std::cout << "covert to map loc" << std::endl;
+    // std::cout << "covert to map loc" << std::endl;
     auto ml_points = Pixel2::toMapLocationList(polygon.points());
-    std::cout << "find cells in polygon" << std::endl;
+    // std::cout << "find cells in polygon" << std::endl;
     std::vector<nav2_costmap_2d::MapLocation> out_points;
     _costmap->convexFillCells(ml_points, out_points);
 

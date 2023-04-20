@@ -3,6 +3,8 @@
 
 #include <functional>
 #include <cmath>
+#include <nav2_util/node_utils.hpp>
+
 #include "base_controller.hpp"
 #include "wombat_utility/utility.hpp"
 #include "Eigen/Dense"
@@ -69,13 +71,15 @@ public:
 
   virtual geometry_msgs::msg::Twist control(const Pose2& robot_pose,
                                             const std::shared_ptr<LocalPath2>& local_path,
-                                            const double end_approach_scale) override
+                                            const double end_approach_scale,
+                                            const Pose2& tolerance = Pose2()) override
   {
     // if(local_path.poses.empty())
       // RCLCPP_INFO(_logger, "local path size: %d", (int)local_path.poses.size());
     assert(!local_path->path().poses().empty());
 
-
+    (void)tolerance;
+    
     if(local_path->path().size() == 1)
     {
       this->setOrientationMode("by_path");

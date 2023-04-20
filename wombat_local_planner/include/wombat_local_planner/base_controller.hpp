@@ -36,7 +36,8 @@ public:
    */
   virtual geometry_msgs::msg::Twist control(const Pose2& robot_pose,
                                             const std::shared_ptr<LocalPath2>& local_path,
-                                            const double end_approach_scale) = 0;
+                                            const double end_approach_scale,
+                                            const Pose2& tolerance = Pose2()) = 0;
 
 protected:
   BaseController() = default;

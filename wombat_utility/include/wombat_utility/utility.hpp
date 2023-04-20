@@ -33,6 +33,28 @@ public:
 
 // static inline std
 
+static inline nav_msgs::msg::Path checkPath(const nav_msgs::msg::Path& path)
+{
+  nav_msgs::msg::Path ret = path;
+  auto frame_id = path.header.frame_id;
+  auto stamp = path.header.stamp;
+
+  //check if updateing frameid and stamp is needed
+  if(path.poses.empty())
+    return ret;
+  
+  //only check last pose
+  if(!path.poses.back().header.frame_id.empty())
+    return ret;
+
+  for(auto& e : ret.poses)
+  {
+    e.header.frame_id = frame_id;
+    e.header.stamp = stamp;
+  }
+  return ret;
+}
+
 
 static inline geometry_msgs::msg::TwistStamped getEmptyTwist(const rclcpp::Time& stamp, const std::string& frame_id)
 {

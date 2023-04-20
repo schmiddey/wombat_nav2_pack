@@ -12,6 +12,8 @@
 #include <nav2_costmap_2d/costmap_2d.hpp>
 #include <tf2/utils.h>
 #include <tf2/transform_datatypes.h>
+#include <tf2/convert.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 
@@ -98,6 +100,10 @@ static inline Eigen::Rotation2Dd toRotation2d(const geometry_msgs::msg::Quaterni
 // types
 struct Pose2{
   Pose2() = default;
+  Pose2(const Pose2&) = default;
+  Pose2(Pose2&&) = default;
+  Pose2& operator=(const Pose2&) = default;
+  Pose2& operator=(Pose2&&) = default;
   Pose2(const Eigen::Vector2d& pos, const Eigen::Vector2d& ori_vec):
     position(pos),
     orientation_vec(ori_vec)
@@ -107,6 +113,8 @@ struct Pose2{
     rotation(Convert::toRotation2d(ros_pose.orientation)),
     orientation_vec(rotation * Eigen::Vector2d(1,0))
   { }
+
+
   ~Pose2() = default;
 
   geometry_msgs::msg::Pose toRosPose() const
