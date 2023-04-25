@@ -3,8 +3,25 @@ from dataclasses_json import dataclass_json
 import copy
 
 import os.path
-
+import threading
 import random
+import sys
+
+import rclpy
+
+from rclpy.action import ActionClient
+from rclpy.node import Node
+
+from action_msgs.msg import GoalStatus
+
+import tf2_ros
+from tf2_ros import TransformException
+from tf2_ros.buffer import Buffer
+from tf2_ros.transform_listener import TransformListener
+
+
+from nav2_msgs.action import NavigateToPose
+
 
 from std_msgs.msg import ColorRGBA
 from geometry_msgs.msg import Quaternion
@@ -12,6 +29,10 @@ from geometry_msgs.msg import Point
 from geometry_msgs.msg import PoseStamped
 from visualization_msgs.msg import MarkerArray
 from visualization_msgs.msg import Marker
+
+
+
+
 
 
 
@@ -294,5 +315,147 @@ class WaypointHandler:
     return markers
   
 
+#todo singleton
 
 
+# class Logger:
+#   _instance = None
+
+#   def __new__(cls):
+#     if cls._instance is None:
+#       print('Creating the object')
+#       cls._instance = super(Logger, cls).__new__(cls)
+#       # Put any initialization here.
+#     return cls._instance
+class Ros2NodeHelper:
+  _instance = None
+
+  def __new__(cls):
+    if cls._instance is None:
+      cls._instance = super(Ros2NodeHelper, cls).__new__(cls)
+      cls.node: Node = None
+      cls.running = False
+      print(sys.argv)
+      rclpy.init(args=sys.argv)
+    return cls._instance
+
+  def get(self) ->Node:
+    return self.node
+
+  def start(self, node: Node):
+    if self.running:
+      return
+        
+    self.node = node
+
+
+    #start thread
+    self.thrd = threading.Thread(target=self._spinner, args=(), daemon=True)
+    self.running = True
+    self.thrd.start()
+
+  def _spinner(self):
+
+    try:  # to prevent exception after Ctrl-C // this is still a bug???
+      rclpy.spin(self.node)
+    except KeyboardInterrupt:
+      pass
+    print("spinner stopped")
+    self.node.destroy_node()
+    rclpy.shutdown()
+    self.running = False
+    
+
+  def stop(self):
+    rclpy.shutdown()
+
+
+
+
+
+class NavigationExecuter():
+  def __init__(self, node: Node):
+    self.node = node
+    self.action_client = ActionClient(node, NavigateToPose, "/navigate_to_pose")
+    self.on_feedback:callable = None
+    self.on_response:callable = None
+    self.on_rdy:callable = None
+
+    self.on_fail:callable = None
+
+    self.navigating = False
+    
+
+  def start(self, pose: PoseStamped):
+    self.navigating = True
+    goal_msg = NavigateToPose.Goal()
+    goal_msg.pose = pose
+    self.action_client.wait_for_server(2.0)
+    self.send_future = self.action_client.send_goal_async(goal_msg, 
+                                feedback_callback=self._feedback_callback
+                                # result_callback=self._get_result_callback
+                                )
+    #add response callback
+    self.send_future.add_done_callback(self._goal_response_callback)
+
+  def _goal_response_callback(self, future):
+    goal_handle = future.result()
+    if not goal_handle.accepted:
+      print('Goal rejected :(')
+      if self.on_fail is not None:
+        self.on_fail()
+        self.navigating = False
+      return
+
+    self._get_result_future = goal_handle.get_result_async()
+    self._get_result_future.add_done_callback(self._get_result_callback)
+
+    print('Goal accepted :)')
+
+    # self.get_result(goal_handle)
+
+  def _get_result_callback(self, future):
+    result = future.result().result
+    status = future.result().status
+    self.navigating = False
+    if status == GoalStatus.STATUS_SUCCEEDED:
+        self.node.get_logger().info('Goal succeeded! Result')
+        if self.on_rdy is not None:
+          self.on_rdy()
+    else:
+        self.node.get_logger().info('Goal failed with status: {0}'.format(status))
+        if self.on_fail is not None:
+          self.on_fail()
+
+  def _feedback_callback(self, feedback_msg):
+    # print('Received feedback: {0}'.format(feedback_msg.feedback))
+    feedback: NavigateToPose.Feedback = feedback_msg.feedback
+    if self.on_feedback is not None:
+      self.on_feedback(feedback)
+
+    
+    
+
+
+class TfListener():
+  def __init__(self, node: Node):
+    self.node = node
+
+    self.tf_buffer = Buffer()
+    self.tf_listener = TransformListener(self.tf_buffer, self.node)
+
+
+  def get_transform(self, target_frame:str, base_frame:str):
+    try:
+      t = self.tf_buffer.lookup_transform(
+                              target_frame,
+                              base_frame,
+                              rclpy.time.Time()
+                              # self.node.get_clock().now(),
+                              # rclpy.duration.Duration(seconds=1.0)
+                              )
+      return t
+    except TransformException as ex:
+      self.node.get_logger().info(
+        f'Could not transform {base_frame} to {target_frame}: {ex}')
+      return None

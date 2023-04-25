@@ -23,6 +23,7 @@ setup(
         'console_scripts': [
           'waypoint_clicker_node = wombat_waypoint.waypoint_clicker:main',
           'waypoint_executer_node = wombat_waypoint.waypoint_executer:main',
+          'waypoint_repeater_node = wombat_waypoint.waypoint_repeater_robocup:main',
         ],
     },
 )

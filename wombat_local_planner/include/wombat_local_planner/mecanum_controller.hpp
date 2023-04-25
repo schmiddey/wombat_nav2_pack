@@ -159,6 +159,16 @@ public:
     cmd.angular.z = vel_ang;
     return cmd;
   }
+
+virtual void setReverseMode(const bool reverse_mode) override
+{
+  (void)reverse_mode;
+}
+
+virtual bool getReverseMode()  const override
+{
+  return false;
+}
  
 protected: //functions
   Eigen::Rotation2Dd computeAngularVel_by_next(const Pose2& robot_pose, const Pose2& target_pose) const

@@ -7,6 +7,8 @@
 #include <vector>
 
 #include <rclcpp/rclcpp.hpp>
+#include <std_srvs/srv/set_bool.hpp>
+#include <std_msgs/msg/bool.hpp>
 
 #include <nav2_core/controller.hpp>
 #include <nav2_core/exceptions.hpp>
@@ -87,6 +89,10 @@ public:
   
 protected:
 
+  void subReverseCallback(const std_msgs::msg::Bool::SharedPtr msg);
+
+  void srvReversCallback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+                         std::shared_ptr<std_srvs::srv::SetBool::Response>      response);
 
 protected:
   struct WombatParameter{
@@ -128,10 +134,6 @@ protected:
   // double           _final_target_dist = 0.05; //todo check if needed
   
 
-
-
-
-  
   nav_msgs::msg::Path _global_path_unmodified;
   // nav_msgs::msg::Path _local_path_unmodified;
   // nav_msgs::msg::Path _transformed_global_plan;
@@ -142,6 +144,12 @@ protected:
 
   // -- -- 
   std::unique_ptr<wombat::LifecylePubHandler> _pub;
+
+  //sub
+  rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr _sub_reverse;
+
+  //srv
+  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr _srv_reverse;
 };
 
 } //namespace wombat_local_planner

@@ -39,6 +39,9 @@ public:
                                             const double end_approach_scale,
                                             const Pose2& tolerance = Pose2()) = 0;
 
+  virtual void setReverseMode(const bool reverse_mode) = 0;
+
+  virtual bool getReverseMode() const = 0;
 protected:
   BaseController() = default;
   rclcpp::Logger _logger {rclcpp::get_logger("wombatLocalPlanner->Controller")};

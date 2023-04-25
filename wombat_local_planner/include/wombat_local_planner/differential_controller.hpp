@@ -76,7 +76,7 @@ public:
     // (void)tolerance;
     
     //print end_approach_scale
-    RCLCPP_INFO(_logger, "end_approach_scale: %f", end_approach_scale);
+    // RCLCPP_INFO(_logger, "end_approach_scale: %f", end_approach_scale);
 
 
     auto t_pose = local_path->getLocalTarget();
@@ -85,10 +85,15 @@ public:
     auto g_pose = local_path->getFinalTarget();
     Eigen::Vector2d g_vec = g_pose.position - robot_pose.position;
 
+    if(_reverse_mode)
+    {
+      t_vec *= -1;
+    }
+
     if(end_approach_scale == 1.0)
     {
       //log info
-      RCLCPP_INFO(_logger, "reset end rotation");
+      // RCLCPP_INFO(_logger, "reset end rotation");
       _do_endrotation = false;
     }
     else if(g_vec.norm() < tolerance.position.x())
@@ -96,7 +101,7 @@ public:
     //todo add a param for that and not use sqrt(2) fac ...
     {
       //log info
-      RCLCPP_INFO(_logger, "end rotation");
+      // RCLCPP_INFO(_logger, "end rotation");
       _do_endrotation = true;
     }
 
@@ -106,11 +111,13 @@ public:
       t_vec = g_pose.orientation_vec;
     }
 
+
+
     //angle between pi and -pi
     auto angle = Utility::angleBetween(robot_pose.orientation_vec, t_vec).smallestAngle();
 
     //print angle
-    RCLCPP_INFO(_logger, "angle: %f", angle);
+    // RCLCPP_INFO(_logger, "angle: %f", angle);
 
 
     double vel_lin = 0.0;
@@ -140,12 +147,21 @@ public:
 
     geometry_msgs::msg::Twist cmd;
 
-    cmd.linear.x = vel_lin;
+    cmd.linear.x = (_reverse_mode ? vel_lin * -1.0 : vel_lin);
     cmd.angular.z = vel_ang;
     
     return cmd;
   }
 
+virtual void setReverseMode(const bool reverse_mode) override
+{
+  _reverse_mode = reverse_mode;
+}
+
+virtual bool getReverseMode()  const override
+{
+  return _reverse_mode;
+}
 
 private:
 
@@ -177,6 +193,7 @@ private:
   double _ang_transfere_fac = 0.0;
 
   bool _do_endrotation = false;
+  bool _reverse_mode = false;
 };
 
 

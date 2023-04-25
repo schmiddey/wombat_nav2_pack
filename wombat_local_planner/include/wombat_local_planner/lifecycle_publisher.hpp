@@ -7,6 +7,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <std_msgs/msg/bool.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <geometry_msgs/msg/polygon_stamped.hpp>
 
@@ -35,6 +36,7 @@ public:
   void publish_local_plan_unmodified(const nav_msgs::msg::Path& path);
   void publish_footprint_em_stop(const geometry_msgs::msg::PolygonStamped& footprint);
   void publish_footprint_safety(const geometry_msgs::msg::PolygonStamped& footprint);
+  void publish_reverse_mode(const bool reverse_mode);
   void publish_dbg_string(const std::string& msg);
   
 private:
@@ -43,7 +45,7 @@ private:
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>> _pub_local_path_unmodified;
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<geometry_msgs::msg::PolygonStamped>> _pub_footprint_em_stop;
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<geometry_msgs::msg::PolygonStamped>> _pub_footprint_safety;
-  
+  std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<std_msgs::msg::Bool>> _pub_reverse_mode;
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<std_msgs::msg::String>> _pub_dbg_string;
 
 

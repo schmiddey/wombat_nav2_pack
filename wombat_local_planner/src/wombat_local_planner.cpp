@@ -23,10 +23,25 @@ void WombatLocalPlanner::configure(
   _clock       = node->get_clock();
 
 
+  //create pub
   if(!_pub)
   {
     _pub = std::make_unique<wombat::LifecylePubHandler>(parent, name);
   }
+
+  //create sub
+  if(!_sub_reverse)
+  {
+    _sub_reverse = node->create_subscription<std_msgs::msg::Bool>("wombat/set_reverse_mode", rclcpp::QoS(1),
+      std::bind(&WombatLocalPlanner::subReverseCallback, this, std::placeholders::_1));
+  }
+
+  //create srv
+  if(!_srv_reverse)
+  {
+    _srv_reverse = node->create_service<std_srvs::srv::SetBool>("wombat/srv_reverse_mode", std::bind(&WombatLocalPlanner::srvReversCallback, this, std::placeholders::_1, std::placeholders::_2));
+  }
+
 
   RCLCPP_INFO(_logger, "--------------------------------------------------");
   RCLCPP_INFO(_logger, "-- Wombat Local Planner -> Configure... Params: --");
@@ -134,6 +149,7 @@ void WombatLocalPlanner::cleanup()
 {
   RCLCPP_INFO(_logger, "Cleaning up controller: %s", _plugin_name.c_str());
   _pub->on_cleanup();
+  _sub_reverse.reset();
 }
 
 void WombatLocalPlanner::activate() 
@@ -356,6 +372,29 @@ void WombatLocalPlanner::setSpeedLimit(const double & speed_limit, const bool & 
   RCLCPP_ERROR(_logger, "speedlimit: %f , use percent %s", sl, (per ? "true" : "false"));
 }
 
+void WombatLocalPlanner::subReverseCallback(const std_msgs::msg::Bool::SharedPtr msg)
+{
+  (void)msg;
+  RCLCPP_INFO(_logger, "subReverseCallback!!!! --  %s", msg->data ? "true" : "false");
+  if(_controller)
+  {
+    _controller->setReverseMode(msg->data);
+    _pub->publish_reverse_mode(_controller->getReverseMode());
+  }
+}
+
+void WombatLocalPlanner::srvReversCallback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+                         std::shared_ptr<std_srvs::srv::SetBool::Response>      response)
+{
+  (void)request;
+  (void)response;
+  RCLCPP_INFO(_logger, "srvReversCallback!!!! --  %s", request->data ? "true" : "false");
+  // if(_controller)
+  // {
+  //   _controller->setReverseMode(request->data);
+  //   _pub->publish_reverse_mode(_controller->getReverseMode());
+  // }
+}
 
 } // namespace wombat_local_planner
 
