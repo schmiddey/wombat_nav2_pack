@@ -266,7 +266,9 @@ geometry_msgs::msg::TwistStamped WombatLocalPlanner::computeVelocityCommands(con
 
   msg.twist = _limit_accel->limitAccel(tmp_twist, vel_fac);
 
-
+  msg.twist.linear.x *= -1.0;
+  msg.twist.linear.y *= -1.0;
+  // msg.twist.angular.z *= -1.0;
 
   msg.header.stamp = pose.header.stamp;
   msg.header.frame_id = _costmap_ros->getBaseFrameID();
