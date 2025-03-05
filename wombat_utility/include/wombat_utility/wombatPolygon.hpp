@@ -140,10 +140,10 @@ public:
 
     Eigen::MatrixXd res = aff * m;
 
-    for(unsigned int i = 0; i < _points.size(); i++)
+    for(unsigned int n = 0; n < _points.size(); n++)
     {
-      _points[i].x() = res(0,i) + c.x();
-      _points[i].y() = res(1,i) + c.y();
+      _points[n].x() = res(0,n) + c.x();
+      _points[n].y() = res(1,n) + c.y();
     }
   }
 

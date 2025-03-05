@@ -11,7 +11,6 @@
 #include <std_msgs/msg/bool.hpp>
 
 #include <nav2_core/controller.hpp>
-#include <nav2_core/exceptions.hpp>
 #include <nav2_util/node_utils.hpp>
 
 #include <nav2_costmap_2d/footprint.hpp>
